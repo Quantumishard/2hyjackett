@@ -21,6 +21,7 @@ const fetchTorrent = async (query) => {
   // Rest of your code...
 };
 
+
   ];
 
   try {
