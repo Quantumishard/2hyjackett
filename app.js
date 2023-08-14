@@ -18,12 +18,6 @@ const fetchTorrent = async (query) => {
     `${host2}/api/v2.0/indexers/all/results?apikey=${apiKey2}&Query=${query}&Category%5B%5D=2000&Category%5B%5D=5000&Tracker%5B%5D=piratebay&Tracker%5B%5D=1337x`
   ];
 
-  // Rest of your code...
-};
-
-
-  ];
-
   try {
     const responses = await Promise.all(urls.map(url =>
       fetch(url, {
@@ -37,6 +31,15 @@ const fetchTorrent = async (query) => {
         method: "GET",
       })
     ));
+
+    // Rest of your code...
+  } catch (error) {
+    // Handle any errors here
+    console.error("Error fetching torrents:", error);
+    return [];
+  }
+};
+
 
     const results = await Promise.all(responses.map(async (response) => {
       if (!response.ok) {
