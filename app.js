@@ -6,6 +6,7 @@ const torrentStream = require("torrent-stream");
 
 const bodyParser = require("body-parser");
 
+// Define your Jackett servers and API keys
 const host1 = "http://129.153.72.60:9117"; // Existing Jackett server
 const host2 = "http://94.61.74.253:9117"; // New Jackett server URL (same endpoint)
 const apiKey1 = "k7lsbawbs4aq8t1s56c58jm091gm7mk7"; // API key for existing Jackett server
@@ -25,7 +26,7 @@ const fetchTorrent = async (query) => {
           accept: "*/*",
           "accept-language": "en-US,en;q=0.9",
           "x-requested-with": "XMLHttpRequest",
-          cookie: "Jackett=CfDJ8AG_XUDhxS5AsRKz0FldsDJIHUJANrfynyi54VzmYuhr5Ha5Uaww2hSQytMR8fFWjPvDH2lKCzaQhRYI9RuK613PZxJWz2tgHqg1wUAcPTMfi8b_8rm1Igw1-sZB_MnimHHK7ZSP7HfkWicMDaJ4bFGZwUf0xJOwcgjrwcUcFzzsVSTALt97-ibhc7PUn97v5AICX2_jsd6khO8TZosaPFt0cXNgNofimAkr5l6yMUjShg7R3TpVtJ1KxD8_0_OyBjR1mwtcxofJam2aZeFqVRxluD5hnzdyxOWrMRLSGzMPMKiaPXNCsxWy_yQhZhE66U_bVFadrsEeQqqaWb3LIFA", // Replace with your host cookie
+          cookie: "Jackett=YOUR_COOKIE_HERE", // Replace with your host cookie
         },
         referrerPolicy: "no-referrer",
         method: "GET",
