@@ -27,8 +27,11 @@ const apiKey2 = "e71yh2n0fopfnyk2j2ywzjfa3sz4xv8d"; // API key for new Jackett s
 const fetchTorrent = async (query) => {
   // Fetch torrents from both host1 and host2
   const urls = [
-    `${host1}/api/v2.0/indexers/all/results?apikey=${apiKey1}&Query=${query}&Category%5B%5D=2000&Category%5B%5D=5000&Tracker%5B%5D=bitsearch&Tracker%5B%5D=bulltorrent&Tracker%5B%5D=solidtorrents`,
-    `${host2}/api/v2.0/indexers/all/results?apikey=${apiKey2}&Query=${query}&Category%5B%5D=2000&Category%5B%5D=5000&Tracker%5B%5D=piratebay&Tracker%5B%5D=1337x`;
+    const urls = [
+  `${host1}/api/v2.0/indexers/all/results?apikey=${apiKey1}&Query=${query}&Category%5B%5D=2000&Category%5B%5D=5000&Tracker%5B%5D=bitsearch&Tracker%5B%5D=bulltorrent&Tracker%5B%5D=solidtorrents`,
+  `${host2}/api/v2.0/indexers/all/results?apikey=${apiKey2}&Query=${query}&Category%5B%5D=2000&Category%5B%5D=5000&Tracker%5B%5D=piratebay&Tracker%5B%5D=1337x`,
+];
+
   ];
 
   try {
