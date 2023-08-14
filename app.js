@@ -168,10 +168,10 @@ let stream_results = [];
 let torrent_results = [];
 
 const host1 = "http:/129.153.72.60:9117";
-const apiKey1 = "YOUR_API_KEY_1";
+const apiKey1 = "k7lsbawbs4aq8t1s56c58jm091gm7mk7";
 
 const host2 = "http://94.61.74.253:9117";
-const apiKey2 = "YOUR_API_KEY_2";
+const apiKey2 = "e71yh2n0fopfnyk2j2ywzjfa3sz4xv8d";
 
 let fetchTorrent = async (query, host1, apiKey1, host2, apiKey2) => {
   const url1 = `${host1}/api/v2.0/indexers/all/results?apikey=${apiKey1}&Query=${query}&Category%5B%5D=2000&Category%5B%5D=5000&Tracker%5B%5D=bitsearch&Tracker%5B%5D=bulltorrent&Tracker%5B%5D=solidtorrents`;
