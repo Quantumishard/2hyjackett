@@ -1,8 +1,8 @@
-const parseTorrent = require("parse-torrent");
 const express = require("express");
 const app = express();
 const fetch = require("node-fetch");
 const torrentStream = require("torrent-stream");
+
 const bodyParser = require("body-parser");
 
 function getSize(size) {
@@ -166,41 +166,48 @@ const streamFromMagnet = (tor, uri, type, s, e) => {
   });
 };
 
-let stream_results = [];
-let torrent_results = [];
-
 const host1 = "http:/129.153.72.60:9117";
 const host2 = "http://94.61.74.253:9117";  // Specify your second host
 
 const apiKey1 = "k7lsbawbs4aq8t1s56c58jm091gm7mk7";  // First API key
-const apiKey2 = "e71yh2n0fopfnyk2j2ywzjfa3sz4xv8d";  // Second API key (for Jackett)
+const apiKey2 = "e71yh2n0fopfnyk2j2ywzjfa3sz4xv8d";  // Second API key (for Jackett, based on your description)
 
-let fetchTorrent = async (query, apiKey, host) => {
-  let url = `${host}/api/v2.0/indexers/all/results?apikey=${apiKey}&Query=${query}&Category%5B%5D=2000&Category%5B%5D=5000&Tracker%5B%5D=bitsearch&Tracker%5B%5D=bulltorrent&Tracker%5B%5D=solidtorrents`;
+let fetchTorrent = async (query) => {
+  let url1 = `${host1}/api/v2.0/indexers/all/results?apikey=${apiKey1}&Query=${query}`;
+  let url2 = `${host2}/api/v2.0/indexers/all/results?apikey=${apiKey2}&Query=${query}`;
 
   try {
-    const response = await fetch(url, {
-      headers: {
-        accept: "*/*",
-        "accept-language": "en-US,en;q=0.9",
-        "x-requested-with": "XMLHttpRequest",
-        cookie:
-          "Jackett=CfDJ8AG_XUDhxS5AsRKz0FldsDJIHUJANrfynyi54VzmYuhr5Ha5Uaww2hSQytMR8fFWjPvDH2lKCzaQhRYI9RuK613PZxJWz2tgHqg1wUAcPTMfi8b_8rm1Igw1-sZB_MnimHHK7ZSP7HfkWicMDaJ4bFGZwUf0xJOwcgjrwcUcFzzsVSTALt97-ibhc7PUn97v5AICX2_jsd6khO8TZosaPFt0cXNgNofimAkr5l6yMUjShg7R3TpVtJ1KxD8_0_OyBjR1mwtcxofJam2aZeFqVRxluD5hnzdyxOWrMRLSGzMPMKiaPXNCsxWy_yQhZhE66U_bVFadrsEeQqqaWb3LIFA",
-      },
-      referrerPolicy: "no-referrer",
-      method: "GET",
-    });
+    const [response1, response2] = await Promise.all([
+      fetch(url1, {
+        headers: {
+          accept: "*/*",
+          "accept-language": "en-US,en;q=0.9",
+          "x-requested-with": "XMLHttpRequest",
+          cookie:
+            "Jackett=CfDJ8AG_XUDhxS5AsRKz0FldsDJIHUJANrfynyi54VzmYuhr5Ha5Uaww2hSQytMR8fFWjPvDH2lKCzaQhRYI9RuK613PZxJWz2tgHqg1wUAcPTMfi8b_8rm1Igw1-sZB_MnimHHK7ZSP7HfkWicMDaJ4bFGZwUf0xJOwcgjrwcUcFzzsVSTALt97-ibhc7PUn97v5AICX2_jsd6khO8TZosaPFt0cXNgNofimAkr5l6yMUjShg7R3TpVtJ1KxD8_0_OyBjR1mwtcxofJam2aZeFqVRxluD5hnzdyxOWrMRLSGzMPMKiaPXNCsxWy_yQhZhE66U_bVFadrsEeQqqaWb3LIFA",
+        },
+        referrerPolicy: "no-referrer",
+        method: "GET",
+      }),
+      fetch(url2, {
+        headers: {
+          accept: "*/*",
+          "accept-language": "en-US,en;q=0.9",
+          "x-requested-with": "XMLHttpRequest",
+          cookie:
+            "Jackett=CfDJ8AG_XUDhxS5AsRKz0FldsDJIHUJANrfynyi54VzmYuhr5Ha5Uaww2hSQytMR8fFWjPvDH2lKCzaQhRYI9RuK613PZxJWz2tgHqg1wUAcPTMfi8b_8rm1Igw1-sZB_MnimHHK7ZSP7HfkWicMDaJ4bFGZwUf0xJOwcgjrwcUcFzzsVSTALt97-ibhc7PUn97v5AICX2_jsd6khO8TZosaPFt0cXNgNofimAkr5l6yMUjShg7R3TpVtJ1KxD8_0_OyBjR1mwtcxofJam2aZeFqVRxluD5hnzdyxOWrMRLSGzMPMKiaPXNCsxWy_yQhZhE66U_bVFadrsEeQqqaWb3LIFA",
+        },
+        referrerPolicy: "no-referrer",
+        method: "GET",
+      }),
+    ]);
 
-    if (!response.ok) {
-      console.error("Error fetching torrents. Status:", response.status);
-      return [];
-    }
-
-    const results = await response.json();
-    console.log({ Initial: results["Results"].length });
-
-    if (results["Results"].length !== 0) {
-      return results["Results"].map((result) => ({
+    const [results1, results2] = await Promise.all([response1.json(), response2.json()]);
+    
+    const results = [...results1["Results"], ...results2["Results"]];
+    
+    if (results.length !== 0) {
+      return results.map((result) => ({
         Tracker: result["Tracker"],
         Category: result["CategoryDesc"],
         Title: result["Title"],
@@ -218,25 +225,6 @@ let fetchTorrent = async (query, apiKey, host) => {
     return [];
   }
 };
-
-function getMeta(id, type) {
-  var [tt, s, e] = id.split(":");
-
-  return fetch(`https://v2.sg.media-imdb.com/suggestion/t/${tt}.json`)
-    .then((res) => res.json())
-    .then((json) => json.d[0])
-    .then(({ l, y }) => ({ name: l, year: y }))
-    .catch((err) =>
-      fetch(`${host1}/meta/${type}/${tt}.json`)
-        .then((res) => res.json())
-        .then((json) => json.meta)
-        .catch(() =>
-          fetch(`${host2}/meta/${type}/${tt}.json`)
-            .then((res) => res.json())
-            .then((json) => json.meta)
-        )
-    );
-}
 
 app.get("/manifest.json", (req, res) => {
   const manifest = {
@@ -277,7 +265,7 @@ app.get("/stream/:type/:id", async (req, res) => {
   }
   query = encodeURIComponent(query);
 
-  let result = await fetchTorrent(query, apiKey1, host1);
+  let result = await fetchTorrent(query);
 
   let stream_results = await Promise.all(
     result.map((torrent) => {
@@ -313,3 +301,4 @@ const port = process.env.PORT || 3000;
 app.listen(port, () => {
   console.log("The server is working on port " + port);
 });
+
