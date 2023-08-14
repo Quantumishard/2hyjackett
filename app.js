@@ -32,24 +32,16 @@ const fetchTorrent = async (query) => {
       })
     ));
 
-    // Rest of your code...
-  } catch (error) {
-    // Handle any errors here
-    console.error("Error fetching torrents:", error);
-    return [];
-  }
-};
-
-
-    const results = await Promise.all(responses.map(async (response) => {
+    const results = [];
+    for (const response of responses) {
       if (!response.ok) {
         console.error("Error fetching torrents. Status:", response.status);
-        return [];
+        results.push([]);
+      } else {
+        const data = await response.json();
+        results.push(data["Results"]);
       }
-
-      const data = await response.json();
-      return data["Results"];
-    }));
+    }
 
     // Combine results from both host1 and host2
     const combinedResults = results.flat();
@@ -75,6 +67,7 @@ const fetchTorrent = async (query) => {
     return [];
   }
 };
+
 
 // ... (rest of the code remains the same)
 
