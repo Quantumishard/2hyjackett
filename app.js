@@ -3,8 +3,7 @@ const express = require("express");
 const app = express();
 const fetch = require("node-fetch");
 const torrentStream = require("torrent-stream");
-
-// ... Other required modules ...
+const bodyParser = require("body-parser");
 
 function getSize(size) {
   const gb = 1024 * 1024 * 1024;
@@ -167,45 +166,59 @@ const streamFromMagnet = (tor, uri, type, s, e) => {
   });
 };
 
-
-const host = "http://129.153.72.60:9117";
-const apiKey = "k7lsbawbs4aq8t1s56c58jm091gm7mk7";
-
 let stream_results = [];
 let torrent_results = [];
 
+const host1 = "http:/129.153.72.60:9117";
+const host2 = "http://94.61.74.253:9117";  // Specify your second host
+
+const apiKey1 = "k7lsbawbs4aq8t1s56c58jm091gm7mk7";  // First API key
+const apiKey2 = "e71yh2n0fopfnyk2j2ywzjfa3sz4xv8d";  // Second API key (for Jackett, based on your description)
+
 let fetchTorrent = async (query) => {
+  let url = `${host2}/api/v2.0/indexers/all/results?apikey=${apiKey2}&Query=${query}&Category%5B%5D=2000&Category%5B%5D=5000&Tracker%5B%5D=bitsearch&Tracker%5B%5D=bulltorrent&Tracker%5B%5D=solidtorrents`;
+
   try {
-    // Implement fetching torrents based on the query
-    // and return the list of results
-    // Example implementation (replace with actual implementation):
-    const response = await fetch(/* Your API request here */);
+    const response = await fetch(url, {
+      headers: {
+        accept: "*/*",
+        "accept-language": "en-US,en;q=0.9",
+        "x-requested-with": "XMLHttpRequest",
+        cookie:
+          "Jackett=CfDJ8AG_XUDhxS5AsRKz0FldsDJIHUJANrfynyi54VzmYuhr5Ha5Uaww2hSQytMR8fFWjPvDH2lKCzaQhRYI9RuK613PZxJWz2tgHqg1wUAcPTMfi8b_8rm1Igw1-sZB_MnimHHK7ZSP7HfkWicMDaJ4bFGZwUf0xJOwcgjrwcUcFzzsVSTALt97-ibhc7PUn97v5AICX2_jsd6khO8TZosaPFt0cXNgNofimAkr5l6yMUjShg7R3TpVtJ1KxD8_0_OyBjR1mwtcxofJam2aZeFqVRxluD5hnzdyxOWrMRLSGzMPMKiaPXNCsxWy_yQhZhE66U_bVFadrsEeQqqaWb3LIFA",
+      },
+      referrerPolicy: "no-referrer",
+      method: "GET",
+    });
+
+    if (!response.ok) {
+      console.error("Error fetching torrents. Status:", response.status);
+      return [];
+    }
+
     const results = await response.json();
-    return results;
+    console.log({ Initial: results["Results"].length });
+
+    if (results["Results"].length !== 0) {
+      return results["Results"].map((result) => ({
+        Tracker: result["Tracker"],
+        Category: result["CategoryDesc"],
+        Title: result["Title"],
+        Seeders: result["Seeders"],
+        Peers: result["Peers"],
+        Link: result["Link"],
+        MagnetUri: result["MagnetUri"],
+      }));
+    } else {
+      return [];
+    }
   } catch (error) {
     // Handle any errors here
     console.error("Error fetching torrents:", error);
     return [];
   }
 };
-
-function getMeta(id, type) {
-  try {
-    // Implement fetching metadata based on the ID and type
-    // and return the metadata object
-    // Example implementation (replace with actual implementation):
-    const response = await fetch(/* Your API request here */);
-    const meta = await response.json();
-    return meta;
-  } catch (error) {
-    // Handle any errors here
-    console.error("Error fetching metadata:", error);
-    return null;
-  }
-}
-
 app.get("/manifest.json", (req, res) => {
-  // Implement the manifest endpoint
   const manifest = {
     id: "mikmc.od.org+++",
     version: "3.0.0",
@@ -225,7 +238,6 @@ app.get("/manifest.json", (req, res) => {
 });
 
 app.get("/stream/:type/:id", async (req, res) => {
-  // Implement the stream endpoint
   const media = req.params.type;
   let id = req.params.id;
   id = id.replace(".json", "");
@@ -234,6 +246,8 @@ app.get("/stream/:type/:id", async (req, res) => {
   let query = "";
   let meta = await getMeta(tt, media);
 
+  console.log({ meta: id });
+  console.log({ meta });
   query = meta?.name;
 
   if (media === "movie") {
@@ -267,6 +281,10 @@ app.get("/stream/:type/:id", async (req, res) => {
   res.setHeader("Access-Control-Allow-Origin", "*");
   res.setHeader("Access-Control-Allow-Headers", "*");
   res.setHeader("Content-Type", "application/json");
+
+  console.log({ check: "check" });
+
+  console.log({ Final: stream_results.length });
 
   return res.send({ streams: stream_results });
 });
