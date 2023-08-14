@@ -232,7 +232,6 @@ let fetchTorrent = async (query, host1, apiKey1, host2, apiKey2) => {
   }
 };
 
-
 function getMeta(id, type) {
   var [tt, s, e] = id.split(":");
 
