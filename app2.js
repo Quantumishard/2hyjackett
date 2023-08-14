@@ -7,19 +7,6 @@ const torrentStream = require("torrent-stream");
 const bodyParser = require("body-parser");
 
 const host1 = "http://129.153.72.60:9117"; // Existing Jackett server
-const host2 = "http://new-jackett-server-url:port"; // New Jackett server URL (same endpoint)
-const apiKey1 = "k7lsbawbs4aq8t1s56c58jm091gm7mk7"; // API key for existing Jackett server
-const apiKey2 = "your-api-key-for-new-jackett-server"; // API key for new Jackett server
-
-const express = require("express");
-const app = express();
-const fetch = require("node-fetch");
-const parseTorrent = require("parse-torrent");
-const torrentStream = require("torrent-stream");
-
-const bodyParser = require("body-parser");
-
-const host1 = "http://129.153.72.60:9117"; // Existing Jackett server
 const host2 = "http://94.61.74.253:9117"; // New Jackett server URL (same endpoint)
 const apiKey1 = "k7lsbawbs4aq8t1s56c58jm091gm7mk7"; // API key for existing Jackett server
 const apiKey2 = "e71yh2n0fopfnyk2j2ywzjfa3sz4xv8d"; // API key for new Jackett server
