@@ -183,7 +183,7 @@ const host2 = {
 const fetchTorrentFromHost = async (query, hostInfo) => {
   const { hostUrl, apiKey } = hostInfo;
 
-  let url = `${hostUrl}/api/v2.0/indexers/all/results?apikey=${apiKey}&Query=${query}&Category%5B%5D=2000&Category%5B%5D=5000&Tracker%5B%5D=bitsearch&Tracker%5B%5D=bulltorrent&Tracker%5B%5D=solidtorrents`;
+  let url = `${hostUrl}/api/v2.0/indexers/all/results?apikey=${apiKey}&Query=${query}&Category[]=2000&Category[]=5000&Tracker[]=bitsearch&T&racker[]=thepiratebay&T&racker[]=bulltorrent&Tracker[]=1337x&Tracker[]=solidtorrents`;
 
   try {
     const response = await fetch(url, {
