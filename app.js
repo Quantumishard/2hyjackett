@@ -173,10 +173,10 @@ const host1 = "http:/129.153.72.60:9117";
 const host2 = "http://94.61.74.253:9117";  // Specify your second host
 
 const apiKey1 = "k7lsbawbs4aq8t1s56c58jm091gm7mk7";  // First API key
-const apiKey2 = "e71yh2n0fopfnyk2j2ywzjfa3sz4xv8d";  // Second API key (for Jackett, based on your description)
+const apiKey2 = "e71yh2n0fopfnyk2j2ywzjfa3sz4xv8d";  // Second API key (for Jackett)
 
-let fetchTorrent = async (query) => {
-  let url = `${host2}/api/v2.0/indexers/all/results?apikey=${apiKey2}&Query=${query}&Category%5B%5D=2000&Category%5B%5D=5000&Tracker%5B%5D=bitsearch&Tracker%5B%5D=bulltorrent&Tracker%5B%5D=solidtorrents`;
+let fetchTorrent = async (query, apiKey, host) => {
+  let url = `${host}/api/v2.0/indexers/all/results?apikey=${apiKey}&Query=${query}&Category%5B%5D=2000&Category%5B%5D=5000&Tracker%5B%5D=bitsearch&Tracker%5B%5D=bulltorrent&Tracker%5B%5D=solidtorrents`;
 
   try {
     const response = await fetch(url, {
@@ -218,6 +218,26 @@ let fetchTorrent = async (query) => {
     return [];
   }
 };
+
+function getMeta(id, type) {
+  var [tt, s, e] = id.split(":");
+
+  return fetch(`https://v2.sg.media-imdb.com/suggestion/t/${tt}.json`)
+    .then((res) => res.json())
+    .then((json) => json.d[0])
+    .then(({ l, y }) => ({ name: l, year: y }))
+    .catch((err) =>
+      fetch(`${host1}/meta/${type}/${tt}.json`)
+        .then((res) => res.json())
+        .then((json) => json.meta)
+        .catch(() =>
+          fetch(`${host2}/meta/${type}/${tt}.json`)
+            .then((res) => res.json())
+            .then((json) => json.meta)
+        )
+    );
+}
+
 app.get("/manifest.json", (req, res) => {
   const manifest = {
     id: "mikmc.od.org+++",
@@ -257,7 +277,7 @@ app.get("/stream/:type/:id", async (req, res) => {
   }
   query = encodeURIComponent(query);
 
-  let result = await fetchTorrent(query);
+  let result = await fetchTorrent(query, apiKey1, host1);
 
   let stream_results = await Promise.all(
     result.map((torrent) => {
