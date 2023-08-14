@@ -130,10 +130,14 @@ const isRedirect = async (url) => {
 const streamFromMagnet = (tor, uri, type, s, e) => {
   return new Promise(async (resolve, reject) => {
     try {
-      const realUrl = uri?.startsWith("magnet:?") ? uri : await isRedirect(uri);
+      let realUrl;
 
-      if (!realUrl) {
-        console.log("No real URL found.");
+      if (uri.startsWith("magnet:?")) {
+        realUrl = uri;
+      } else if (uri.startsWith("http")) {
+        realUrl = uri;
+      } else {
+        console.error("No HTTP nor magnet URI found.");
         resolve(null);
         return;
       }
@@ -142,7 +146,9 @@ const streamFromMagnet = (tor, uri, type, s, e) => {
         const parsedTorrent = parseTorrent(realUrl);
         resolve(await toStream(parsedTorrent, realUrl, tor, type, s, e));
       } else if (realUrl.startsWith("http")) {
-        parseTorrent.remote(realUrl, (err, parsed) => {
+        // Ensure that realUrl is an absolute URL
+        const absoluteUrl = new URL(realUrl);
+        parseTorrent.remote(absoluteUrl.href, (err, parsed) => {
           if (!err) {
             resolve(toStream(parsed, realUrl, tor, type, s, e));
           } else {
@@ -150,9 +156,6 @@ const streamFromMagnet = (tor, uri, type, s, e) => {
             resolve(null);
           }
         });
-      } else {
-        console.error("No HTTP nor magnet URI found.");
-        resolve(null);
       }
     } catch (error) {
       console.error("Error while streaming from magnet:", error);
