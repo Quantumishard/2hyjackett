@@ -272,23 +272,23 @@ app.get("/stream/:type/:id", async (req, res) => {
   const sortedResults = uniqueResults.sort((a, b) => b.Seeders - a.Seeders);
 
   let stream_results = await Promise.all(
-    sortedResults.map((torrent) => {
-      if (
-        (torrent["MagnetUri"] != "" || torrent["Link"] != "") &&
-        torrent["Peers"] > 1
-      ) {
-        return streamFromMagnet(
-          torrent,
-          torrent["MagnetUri"] || torrent["Link"],
-          media,
-          s,
-          e
-        );
-      }
-    })
-  );
+  sortedResults.map((torrent) => {
+    if (
+      (torrent["MagnetUri"] || torrent["Link"]) &&
+      torrent["Seeders"] >= 3
+    ) {
+      return streamFromMagnet(
+        torrent,
+        torrent["MagnetUri"] || torrent["Link"],
+        media,
+        s,
+        e
+      );
+    }
+  })
+);
 
-  stream_results = Array.from(new Set(stream_results)).filter((e) => !!e);
+stream_results = Array.from(new Set(stream_results)).filter((e) => !!e);
 
   res.setHeader("Access-Control-Allow-Origin", "*");
   res.setHeader("Access-Control-Allow-Headers", "*");
