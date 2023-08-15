@@ -195,8 +195,8 @@ const fetchTorrentFromHost1 = async (query) => {
         accept: "*/*",
         "accept-language": "en-US,en;q=0.9",
         "x-requested-with": "XMLHttpRequest",
-        // Set appropriate headers for the host (you may need to customize this)
-        // cookie: "Jackett=...",  // Uncomment and add the cookie if needed
+        cookie:
+          "Jackett=CfDJ8AG_XUDhxS5AsRKz0FldsDJIHUJANrfynyi54VzmYuhr5Ha5Uaww2hSQytMR8fFWjPvDH2lKCzaQhRYI9RuK613PZxJWz2tgHqg1wUAcPTMfi8b_8rm1Igw1-sZB_MnimHHK7ZSP7HfkWicMDaJ4bFGZwUf0xJOwcgjrwcUcFzzsVSTALt97-ibhc7PUn97v5AICX2_jsd6khO8TZosaPFt0cXNgNofimAkr5l6yMUjShg7R3TpVtJ1KxD8_0_OyBjR1mwtcxofJam2aZeFqVRxluD5hnzdyxOWrMRLSGzMPMKiaPXNCsxWy_yQhZhE66U_bVFadrsEeQqqaWb3LIFA",
       },
       referrerPolicy: "no-referrer",
       method: "GET",
@@ -240,8 +240,8 @@ const fetchTorrentFromHost2 = async (query) => {
         accept: "*/*",
         "accept-language": "en-US,en;q=0.9",
         "x-requested-with": "XMLHttpRequest",
-        // Set appropriate headers for the host (you may need to customize this)
-        // cookie: "Jackett=...",  // Uncomment and add the cookie if needed
+        cookie:
+          "Jackett=CfDJ8AG_XUDhxS5AsRKz0FldsDJIHUJANrfynyi54VzmYuhr5Ha5Uaww2hSQytMR8fFWjPvDH2lKCzaQhRYI9RuK613PZxJWz2tgHqg1wUAcPTMfi8b_8rm1Igw1-sZB_MnimHHK7ZSP7HfkWicMDaJ4bFGZwUf0xJOwcgjrwcUcFzzsVSTALt97-ibhc7PUn97v5AICX2_jsd6khO8TZosaPFt0cXNgNofimAkr5l6yMUjShg7R3TpVtJ1KxD8_0_OyBjR1mwtcxofJam2aZeFqVRxluD5hnzdyxOWrMRLSGzMPMKiaPXNCsxWy_yQhZhE66U_bVFadrsEeQqqaWb3LIFA",
       },
       referrerPolicy: "no-referrer",
       method: "GET",
