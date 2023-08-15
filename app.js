@@ -282,33 +282,38 @@ app.get("/stream/:type/:id", async (req, res) => {
 
   // Process and filter the combined results
   const uniqueResults = Array.from(new Set(combinedResults.map(JSON.stringify))).map(JSON.parse);
-  const sortedResults = uniqueResults.sort((a, b) => b.Seeders - a.Seeders);
 
+  // Filter torrents based on seeders and stream results
   let stream_results = await Promise.all(
-  sortedResults.map((torrent) => {
-    if (
-      (torrent["MagnetUri"] || torrent["Link"]) &&
-      torrent["Seeders"] >= 3
-    ) {
-      return streamFromMagnet(
-        torrent,
-        torrent["MagnetUri"] || torrent["Link"],
-        media,
-        s,
-        e
-      );
-    }
-  })
-);
+    uniqueResults
+      .filter((torrent) => (torrent["MagnetUri"] || torrent["Link"]) && torrent["Seeders"] >= 3)
+      .map(async (torrent) => {
+        return await streamFromMagnet(
+          torrent,
+          torrent["MagnetUri"] || torrent["Link"],
+          media,
+          s,
+          e
+        );
+      })
+  );
 
-stream_results = Array.from(new Set(stream_results)).filter((e) => !!e);
+  // Remove any null results
+  stream_results = stream_results.filter((e) => !!e);
+
+  // Sort results by quality (high to low)
+  stream_results.sort((a, b) => {
+    const qualityOrder = ["🌟4k", " 🎥FHD", "📺HD", "📱SD"];
+    const qualityIndexA = qualityOrder.indexOf(a.title.split("|")[1].trim());
+    const qualityIndexB = qualityOrder.indexOf(b.title.split("|")[1].trim());
+    return qualityIndexB - qualityIndexA;
+  });
 
   res.setHeader("Access-Control-Allow-Origin", "*");
   res.setHeader("Access-Control-Allow-Headers", "*");
   res.setHeader("Content-Type", "application/json");
 
   console.log({ check: "check" });
-
   console.log({ Final: stream_results.length });
 
   return res.send({ streams: stream_results });
