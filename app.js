@@ -148,38 +148,39 @@ const isRedirect = async (url) => {
 // ...
 
 const streamFromMagnet = async (tor, uri, type, s, e) => {
-  return new Promise(async (resolve, reject) => {
-    try {
-      const realUrl = uri?.startsWith("magnet:?") ? uri : await isRedirect(uri);
+  try {
+    const realUrl = uri?.startsWith("magnet:?") ? uri : await isRedirect(uri);
 
-      if (!realUrl) {
-        console.log("No real URL found.");
-        resolve(null);
-        return;
-      }
+    if (!realUrl) {
+      console.log("No real URL found.");
+      return null;
+    }
 
-      if (realUrl.startsWith("magnet:?")) {
-        const parsedTorrent = parseTorrent(realUrl);
-        resolve(await toStream(parsedTorrent, realUrl, tor, type, s, e));
-      } else if (realUrl.startsWith("http")) {
-        parseTorrent.remote(realUrl, async (err, parsed) => {
-          if (!err) {
-            resolve(await toStream(parsed, realUrl, tor, type, s, e));
-          } else {
+    if (realUrl.startsWith("magnet:?")) {
+      const parsedTorrent = parseTorrent(realUrl);
+      return await toStream(parsedTorrent, realUrl, tor, type, s, e);
+    } else if (realUrl.startsWith("http")) {
+      const parsed = await new Promise((resolve, reject) => {
+        parseTorrent.remote(realUrl, (err, parsed) => {
+          if (err) {
             console.error("Error parsing HTTP:", err);
             resolve(null);
+          } else {
+            resolve(parsed);
           }
         });
-      } else {
-        console.error("No HTTP nor magnet URI found.");
-        resolve(null);
-      }
-    } catch (error) {
-      console.error("Error while streaming from magnet:", error);
-      resolve(null);
+      });
+      return await toStream(parsed, realUrl, tor, type, s, e);
+    } else {
+      console.error("No HTTP nor magnet URI found.");
+      return null;
     }
-  });
+  } catch (error) {
+    console.error("Error while streaming from magnet:", error);
+    return null;
+  }
 };
+
 
 let stream_results = [];
 let torrent_results = [];
