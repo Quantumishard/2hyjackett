@@ -6,7 +6,7 @@ const torrentStream = require("torrent-stream");
 const bodyParser = require("body-parser");
 const http = require("http");
 
-const getSize = (size) => {
+function getSize(size) {
   const gb = 1024 * 1024 * 1024;
   const mb = 1024 * 1024;
 
@@ -14,9 +14,9 @@ const getSize = (size) => {
     "💾 " +
     (size / gb > 1 ? `${(size / gb).toFixed(2)} GB` : `${(size / mb).toFixed(2)} MB`)
   );
-};
+}
 
-const getQuality = (name) => {
+function getQuality(name) {
   name = name.toLowerCase();
 
   if (["2160", "4k", "uhd"].some((x) => name.includes(x))) return "🌟4k";
@@ -24,7 +24,7 @@ const getQuality = (name) => {
   if (["720", "hd"].some((x) => name.includes(x))) return "📺HD";
   if (["480p", "380p", "sd"].some((x) => name.includes(x))) return "📱SD";
   return "";
-};
+}
 
 const toStream = async (parsed, uri, tor, type, s, e) => {
   const infoHash = parsed.infoHash.toLowerCase();
@@ -50,7 +50,6 @@ const toStream = async (parsed, uri, tor, type, s, e) => {
       parsed.files = res;
       engine.destroy();
     } catch (error) {
-      // Handle any errors here
       console.error("Error fetching torrent data:", error);
     }
   }
@@ -157,13 +156,6 @@ const streamFromMagnet = (tor, uri, type, s, e) => {
       console.error("Error while streaming from magnet:", error);
       resolve(null);
     }
-
-    // Add a timeout for resolving the promise
-    const timeoutDuration = 10000; // Timeout in milliseconds
-    setTimeout(() => {
-      console.error("Request timeout");
-      resolve(null); // Resolve with null in case of timeout
-    }, timeoutDuration);
   });
 };
 
@@ -176,14 +168,13 @@ const host1 = {
 };
 
 const host2 = {
-  hostUrl: "http://94.61.74.253:9117",  // Replace with the URL of the second indexer
-  apiKey: "e71yh2n0fopfnyk2j2ywzjfa3sz4xv8d",         // Replace with the API key for the second indexer
+  hostUrl: "http://94.61.74.253:9117",
+  apiKey: "e71yh2n0fopfnyk2j2ywzjfa3sz4xv8d",
 };
 
-const fetchTorrentFromHost = async (query, hostInfo) => {
-  const { hostUrl, apiKey } = hostInfo;
-
-  let url = `${hostUrl}/api/v2.0/indexers/all/results?apikey=${apiKey}&Query=${query}&Category%5B%5D=2000&Category%5B%5D=5000&Tracker%5B%5D=bitsearch&Tracker%5B%5D=bulltorrent&Tracker%5B%5D=solidtorrents`;
+const fetchTorrentFromHost1 = async (query) => {
+  const { hostUrl, apiKey } = host1;
+  const url = `${hostUrl}/api/v2.0/indexers/all/results?apikey=${apiKey}&Query=${query}&Category%5B%5D=2000&Category%5B%5D=5000&Tracker%5B%5D=bitsearch&Tracker%5B%5D=bulltorrent&Tracker%5B%5D=solidtorrents`;
 
   try {
     const response = await fetch(url, {
@@ -199,12 +190,12 @@ const fetchTorrentFromHost = async (query, hostInfo) => {
     });
 
     if (!response.ok) {
-      console.error("Error fetching torrents. Status:", response.status);
+      console.error("Error fetching torrents from host 1. Status:", response.status);
       return [];
     }
 
     const results = await response.json();
-    console.log({ Initial: results["Results"].length });
+    console.log({ Host1: results["Results"].length });
 
     if (results["Results"].length !== 0) {
       return results["Results"].map((result) => ({
@@ -220,13 +211,56 @@ const fetchTorrentFromHost = async (query, hostInfo) => {
       return [];
     }
   } catch (error) {
-    // Handle any errors here
-    console.error("Error fetching torrents:", error);
+    console.error("Error fetching torrents from host 1:", error);
     return [];
   }
 };
 
-const getMeta = async (id, type) => {
+const fetchTorrentFromHost2 = async (query) => {
+  const { hostUrl, apiKey } = host2;
+  const url = `${hostUrl}/api/v2.0/indexers/all/results?apikey=${apiKey}&Query=${query}&Category%5B%5D=2000&Category%5B%5D=5000&Tracker%5B%5D=otherindexer1&Tracker%5B%5D=otherindexer2`;
+
+  try {
+    const response = await fetch(url, {
+      headers: {
+        accept: "*/*",
+        "accept-language": "en-US,en;q=0.9",
+        "x-requested-with": "XMLHttpRequest",
+        // Set appropriate headers for the host (you may need to customize this)
+        // cookie: "Jackett=...",  // Uncomment and add the cookie if needed
+      },
+      referrerPolicy: "no-referrer",
+      method: "GET",
+    });
+
+    if (!response.ok) {
+      console.error("Error fetching torrents from host 2. Status:", response.status);
+      return [];
+    }
+
+    const results = await response.json();
+    console.log({ Host2: results["Results"].length });
+
+    if (results["Results"].length !== 0) {
+      return results["Results"].map((result) => ({
+        Tracker: result["Tracker"],
+        Category: result["CategoryDesc"],
+        Title: result["Title"],
+        Seeders: result["Seeders"],
+        Peers: result["Peers"],
+        Link: result["Link"],
+        MagnetUri: result["MagnetUri"],
+      }));
+    } else {
+      return [];
+    }
+  } catch (error) {
+    console.error("Error fetching torrents from host 2:", error);
+    return [];
+  }
+};
+
+function getMeta(id, type) {
   var [tt, s, e] = id.split(":");
 
   return fetch(`https://v2.sg.media-imdb.com/suggestion/t/${tt}.json`)
@@ -238,7 +272,7 @@ const getMeta = async (id, type) => {
         .then((res) => res.json())
         .then((json) => json.meta)
     );
-};
+}
 
 app.get("/manifest.json", (req, res) => {
   const manifest = {
@@ -280,8 +314,8 @@ app.get("/stream/:type/:id", async (req, res) => {
   query = encodeURIComponent(query);
 
   // Fetch torrents from both hosts
-  const result1 = await fetchTorrentFromHost(query, host1);
-  const result2 = await fetchTorrentFromHost(query, host2);
+  const result1 = await fetchTorrentFromHost1(query);
+  const result2 = await fetchTorrentFromHost2(query);
 
   // Combine results from both hosts
   const combinedResults = result1.concat(result2);
