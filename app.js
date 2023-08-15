@@ -334,31 +334,38 @@ const result1 = await fetchTorrentFromHost1(query);
 const result2 = await fetchTorrentFromHost2(query);
 
 // Combine results from both hosts
+// Combine results from both hosts
 const combinedResults = result1.concat(result2);
 
 // Process and filter the combined results
-const uniqueResults = Array.from(new Set(combinedResults.map(JSON.stringify))).map(JSON.parse);
-const sortedResults = uniqueResults.sort((a, b) => b.Seeders - a.Seeders);
+const uniqueResults = [];
+const seenTorrents = new Set();
 
-// Now you can distinguish between the results from different hosts
+combinedResults.forEach((torrent) => {
+  const torrentKey = `${torrent.Tracker}-${torrent.Title}`;
+  if (
+    !seenTorrents.has(torrentKey) &&
+    (torrent["MagnetUri"] !== "" || torrent["Link"] !== "") &&
+    torrent["Peers"] > 1
+  ) {
+    seenTorrents.add(torrentKey);
+    uniqueResults.push(torrent);
+  }
+});
+
 let stream_results = await Promise.all(
-  sortedResults.map((torrent) => {
-    if (
-      (torrent["MagnetUri"] != "" || torrent["Link"] != "") &&
-      torrent["Peers"] > 1
-    ) {
-      return streamFromMagnet(
-        torrent,
-        torrent["MagnetUri"] || torrent["Link"],
-        media,
-        s,
-        e
-      );
-    }
+  uniqueResults.map((torrent) => {
+    return streamFromMagnet(
+      torrent,
+      torrent["MagnetUri"] || torrent["Link"],
+      media,
+      s,
+      e
+    );
   })
 );
 
-  stream_results = Array.from(new Set(stream_results)).filter((e) => !!e);
+stream_results = stream_results.filter((e) => !!e);
 
   res.setHeader("Access-Control-Allow-Origin", "*");
   res.setHeader("Access-Control-Allow-Headers", "*");
