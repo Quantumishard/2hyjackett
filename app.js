@@ -157,8 +157,16 @@ const streamFromMagnet = (tor, uri, type, s, e) => {
       console.error("Error while streaming from magnet:", error);
       resolve(null);
     }
+
+    // Add a timeout for resolving the promise
+    const timeoutDuration = 10000; // Timeout in milliseconds
+    setTimeout(() => {
+      console.error("Request timeout");
+      resolve(null); // Resolve with null in case of timeout
+    }, timeoutDuration);
   });
 };
+
 let stream_results = [];
 let torrent_results = [];
 
