@@ -24,7 +24,6 @@
     "fast-xml-parser": "^4.2.7",
     "node-fetch": "^2.6.12",
     "parse-torrent": "^9.1.5",
-    "torrent-stream": "^1.2.1",
-    "node-abort-controller": "^1.0.0" // Add this line
+    "torrent-stream": "^1.2.1"
   }
 }
