@@ -124,38 +124,51 @@ const isRedirect = async (url) => {
   });
 };
 
-const streamFromMagnet = (tor, uri, type, s, e) => {
+const streamFromMagnet = async (tor, uri, type, s, e, retries = 3) => {
   return new Promise(async (resolve, reject) => {
-    try {
-      // Follow redirection in case the URI is not directly accessible
-      const realUrl = uri?.startsWith("magnet:?") ? uri : await isRedirect(uri);
+    let retryCount = 0;
 
-      if (!realUrl) {
-        console.log("No real URL found.");
-        resolve(null);
-        return;
-      }
+    const attemptStream = async () => {
+      try {
+        // Follow redirection in case the URI is not directly accessible
+        const realUrl = uri?.startsWith("magnet:?") ? uri : await isRedirect(uri);
 
-      if (realUrl.startsWith("magnet:?")) {
-        const parsedTorrent = parseTorrent(realUrl);
-        resolve(await toStream(parsedTorrent, realUrl, tor, type, s, e));
-      } else if (realUrl.startsWith("http")) {
-        parseTorrent.remote(realUrl, (err, parsed) => {
-          if (!err) {
-            resolve(toStream(parsed, realUrl, tor, type, s, e));
-          } else {
-            console.error("Error parsing HTTP:", err);
-            resolve(null);
-          }
-        });
-      } else {
-        console.error("No HTTP nor magnet URI found.");
-        resolve(null);
+        if (!realUrl) {
+          console.log("No real URL found.");
+          resolve(null);
+          return;
+        }
+
+        if (realUrl.startsWith("magnet:?")) {
+          const parsedTorrent = parseTorrent(realUrl);
+          resolve(await toStream(parsedTorrent, realUrl, tor, type, s, e));
+        } else if (realUrl.startsWith("http")) {
+          parseTorrent.remote(realUrl, (err, parsed) => {
+            if (!err) {
+              resolve(toStream(parsed, realUrl, tor, type, s, e));
+            } else {
+              console.error("Error parsing HTTP:", err);
+              resolve(null);
+            }
+          });
+        } else {
+          console.error("No HTTP nor magnet URI found.");
+          resolve(null);
+        }
+      } catch (error) {
+        console.error("Error while streaming from magnet:", error);
+        retryCount++;
+        if (retryCount < retries) {
+          console.log("Retrying...");
+          attemptStream();
+        } else {
+          console.error("Exceeded retry attempts. Giving up.");
+          resolve(null);
+        }
       }
-    } catch (error) {
-      console.error("Error while streaming from magnet:", error);
-      resolve(null);
-    }
+    };
+
+    attemptStream();
   });
 };
 
