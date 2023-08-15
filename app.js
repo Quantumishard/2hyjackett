@@ -99,14 +99,27 @@ const toStream = async (parsed, uri, tor, type, s, e) => {
 
 const isRedirect = async (url) => {
   try {
-    const controller = new AbortController();
-    // 5-second timeout:
-    const timeoutId = setTimeout(() => controller.abort(), 5000);
-
     const response = await fetch(url, {
       redirect: "manual",
-      signal: controller.signal,
     });
+
+    if (response.status === 301 || response.status === 302) {
+      const locationURL = new URL(response.headers.get("location"), response.url);
+      if (locationURL.href.startsWith("http")) {
+        return await isRedirect(locationURL);
+      } else {
+        return locationURL.href;
+      }
+    } else if (response.status >= 200 && response.status < 300) {
+      return response.url;
+    } else {
+      return null;
+    }
+  } catch (error) {
+    console.error("Error while following redirection:", error);
+    return null;
+  }
+};
 
     clearTimeout(timeoutId);
 
