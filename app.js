@@ -285,18 +285,30 @@ app.get("/stream/:type/:id", async (req, res) => {
 
   // Filter torrents based on seeders and stream results
   let stream_results = await Promise.all(
-    uniqueResults
-      .filter((torrent) => (torrent["MagnetUri"] || torrent["Link"]) && torrent["Seeders"] >= 3)
-      .map(async (torrent) => {
-        return await streamFromMagnet(
-          torrent,
-          torrent["MagnetUri"] || torrent["Link"],
-          media,
-          s,
-          e
-        );
-      })
-  );
+  sortedResults.map((torrent) => {
+    if (
+      (torrent["MagnetUri"] || torrent["Link"]) &&
+      torrent["Peers"] > 1
+    ) {
+      return streamFromMagnet(
+        torrent,
+        torrent["MagnetUri"] || torrent["Link"],
+        media,
+        s,
+        e
+      );
+    }
+  })
+);
+
+// Filter out null results and sort by quality (high to low)
+stream_results = stream_results.filter((result) => result !== null);
+stream_results.sort((a, b) => {
+  const qualityOrder = { "🌟4k": 4, " 🎥FHD": 3, "📺HD": 2, "📱SD": 1 };
+  const qualityIndexA = qualityOrder[a.title.split("|")[1].trim()];
+  const qualityIndexB = qualityOrder[b.title.split("|")[1].trim()];
+  return qualityIndexB - qualityIndexA;
+});
 
   // Remove any null results
   stream_results = stream_results.filter((e) => !!e);
