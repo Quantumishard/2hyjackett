@@ -219,6 +219,7 @@ const fetchTorrentFromHost1 = async (query) => {
         Peers: result["Peers"],
         Link: result["Link"],
         MagnetUri: result["MagnetUri"],
+        Host: "Host1", // Add a new property indicating the host
       }));
     } else {
       return [];
@@ -263,6 +264,7 @@ const fetchTorrentFromHost2 = async (query) => {
         Peers: result["Peers"],
         Link: result["Link"],
         MagnetUri: result["MagnetUri"],
+        Host: "Host2", // Add a new property indicating the host
       }));
     } else {
       return [];
@@ -327,32 +329,34 @@ app.get("/stream/:type/:id", async (req, res) => {
   query = encodeURIComponent(query);
 
   // Fetch torrents from both hosts
-  const result1 = await fetchTorrentFromHost1(query);
-  const result2 = await fetchTorrentFromHost2(query);
+  // Fetch torrents from both hosts
+const result1 = await fetchTorrentFromHost1(query);
+const result2 = await fetchTorrentFromHost2(query);
 
-  // Combine results from both hosts
-  const combinedResults = result1.concat(result2);
+// Combine results from both hosts
+const combinedResults = result1.concat(result2);
 
-  // Process and filter the combined results
-  const uniqueResults = Array.from(new Set(combinedResults.map(JSON.stringify))).map(JSON.parse);
-  const sortedResults = uniqueResults.sort((a, b) => b.Seeders - a.Seeders);
+// Process and filter the combined results
+const uniqueResults = Array.from(new Set(combinedResults.map(JSON.stringify))).map(JSON.parse);
+const sortedResults = uniqueResults.sort((a, b) => b.Seeders - a.Seeders);
 
-  let stream_results = await Promise.all(
-    sortedResults.map((torrent) => {
-      if (
-        (torrent["MagnetUri"] != "" || torrent["Link"] != "") &&
-        torrent["Peers"] > 1
-      ) {
-        return streamFromMagnet(
-          torrent,
-          torrent["MagnetUri"] || torrent["Link"],
-          media,
-          s,
-          e
-        );
-      }
-    })
-  );
+// Now you can distinguish between the results from different hosts
+let stream_results = await Promise.all(
+  sortedResults.map((torrent) => {
+    if (
+      (torrent["MagnetUri"] != "" || torrent["Link"] != "") &&
+      torrent["Peers"] > 1
+    ) {
+      return streamFromMagnet(
+        torrent,
+        torrent["MagnetUri"] || torrent["Link"],
+        media,
+        s,
+        e
+      );
+    }
+  })
+);
 
   stream_results = Array.from(new Set(stream_results)).filter((e) => !!e);
 
