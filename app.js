@@ -286,24 +286,28 @@ app.get("/stream/:type/:id", async (req, res) => {
   // Combine results from both hosts
   const combinedResults = result1.concat(result2);
 
-  let stream_results = await Promise.all(
-    combinedResults.map((torrent) => {
-      if (
-        (torrent["MagnetUri"] != "" || torrent["Link"] != "") &&
-        torrent["Peers"] > 1
-      ) {
-        return streamFromMagnet(
-          torrent,
-          torrent["MagnetUri"] || torrent["Link"],
-          media,
-          s,
-          e
-        );
-      }
-    })
-  );
+// Process and filter the combined results
+const uniqueResults = Array.from(new Set(combinedResults.map(JSON.stringify))).map(JSON.parse);
+const sortedResults = uniqueResults.sort((a, b) => b.Seeders - a.Seeders);
 
-  stream_results = Array.from(new Set(stream_results)).filter((e) => !!e);
+let stream_results = await Promise.all(
+  sortedResults.map((torrent) => {
+    if (
+      (torrent["MagnetUri"] != "" || torrent["Link"] != "") &&
+      torrent["Peers"] > 1
+    ) {
+      return streamFromMagnet(
+        torrent,
+        torrent["MagnetUri"] || torrent["Link"],
+        media,
+        s,
+        e
+      );
+    }
+  })
+);
+
+stream_results = Array.from(new Set(stream_results)).filter((e) => !!e);
 
   res.setHeader("Access-Control-Allow-Origin", "*");
   res.setHeader("Access-Control-Allow-Headers", "*");
