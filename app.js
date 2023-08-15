@@ -145,6 +145,8 @@ const isRedirect = async (url) => {
   }
 };
 
+// ...
+
 const streamFromMagnet = (tor, uri, type, s, e) => {
   return new Promise(async (resolve, reject) => {
     try {
@@ -161,9 +163,9 @@ const streamFromMagnet = (tor, uri, type, s, e) => {
         const parsedTorrent = parseTorrent(realUrl);
         resolve(await toStream(parsedTorrent, realUrl, tor, type, s, e));
       } else if (realUrl.startsWith("http")) {
-        parseTorrent.remote(realUrl, (err, parsed) => {
+        parseTorrent.remote(realUrl, async (err, parsed) => { // Add async here
           if (!err) {
-            resolve(toStream(parsed, realUrl, tor, type, s, e));
+            resolve(await toStream(parsed, realUrl, tor, type, s, e));
           } else {
             console.error("Error parsing HTTP:", err);
             resolve(null);
