@@ -147,10 +147,9 @@ const isRedirect = async (url) => {
 
 // ...
 
-const streamFromMagnet = (tor, uri, type, s, e) => {
+const streamFromMagnet = async (tor, uri, type, s, e) => {
   return new Promise(async (resolve, reject) => {
     try {
-      // Follow redirection in case the URI is not directly accessible
       const realUrl = uri?.startsWith("magnet:?") ? uri : await isRedirect(uri);
 
       if (!realUrl) {
@@ -163,7 +162,7 @@ const streamFromMagnet = (tor, uri, type, s, e) => {
         const parsedTorrent = parseTorrent(realUrl);
         resolve(await toStream(parsedTorrent, realUrl, tor, type, s, e));
       } else if (realUrl.startsWith("http")) {
-        parseTorrent.remote(realUrl, async (err, parsed) => { // Add async here
+        parseTorrent.remote(realUrl, async (err, parsed) => {
           if (!err) {
             resolve(await toStream(parsed, realUrl, tor, type, s, e));
           } else {
