@@ -3,6 +3,8 @@ const express = require("express");
 const app = express();
 const fetch = require("node-fetch");
 const torrentStream = require("torrent-stream");
+const bodyParser = require("body-parser");
+const http = require("http");
 
 const bodyParser = require("body-parser");
 
@@ -98,38 +100,31 @@ const toStream = async (parsed, uri, tor, type, s, e) => {
 };
 
 const isRedirect = async (url) => {
-  try {
-    const controller = new AbortController();
-    // 5-second timeout:
-    const timeoutId = setTimeout(() => controller.abort(), 5000);
+  return new Promise((resolve, reject) => {
+    const timeoutId = setTimeout(() => {
+      reject(new Error("Request timeout"));
+    }, 5000); // 5-second timeout
 
-    const response = await fetch(url, {
-      redirect: "manual",
-      signal: controller.signal,
-    });
-
-    clearTimeout(timeoutId);
-
-    if (response.status === 301 || response.status === 302) {
-      const locationURL = new URL(
-        response.headers.get("location"),
-        response.url
-      );
-      if (locationURL.href.startsWith("http")) {
-        return await isRedirect(locationURL);
+    http.get(url, { method: "HEAD" }, (response) => {
+      clearTimeout(timeoutId);
+      if (response.statusCode === 301 || response.statusCode === 302) {
+        const locationURL = new URL(response.headers.location);
+        if (locationURL.href.startsWith("http")) {
+          resolve(isRedirect(locationURL.href));
+        } else {
+          resolve(locationURL.href);
+        }
+      } else if (response.statusCode >= 200 && response.statusCode < 300) {
+        resolve(url);
       } else {
-        return locationURL.href;
+        resolve(null);
       }
-    } else if (response.status >= 200 && response.status < 300) {
-      return response.url;
-    } else {
-      return null;
-    }
-  } catch (error) {
-    // Handle any errors here
-    console.error("Error while following redirection:", error);
-    return null;
-  }
+    }).on("error", (error) => {
+      clearTimeout(timeoutId);
+      console.error("Error while following redirection:", error);
+      resolve(null);
+    });
+  });
 };
 
 const streamFromMagnet = (tor, uri, type, s, e) => {
