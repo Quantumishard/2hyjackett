@@ -159,7 +159,6 @@ const streamFromMagnet = (tor, uri, type, s, e) => {
     }
   });
 };
-
 let stream_results = [];
 let torrent_results = [];
 
