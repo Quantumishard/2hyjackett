@@ -240,25 +240,6 @@ function getMeta(id, type) {
     );
 }
 
-app.get("/manifest.json", (req, res) => {
-  const manifest = {
-    id: "mikmc.od.org+++",
-    version: "3.0.0",
-    name: "HYJackett",
-    description: "Movie & TV Streams from Jackett",
-    logo: "https://raw.githubusercontent.com/mikmc55/hyackett/main/hyjackett.jpg",
-    resources: ["stream"],
-    types: ["movie", "series"],
-    idPrefixes: ["tt"],
-    catalogs: [],
-  };
-
-  res.setHeader("Access-Control-Allow-Origin", "*");
-  res.setHeader("Access-Control-Allow-Headers", "*");
-  res.setHeader("Content-Type", "application/json");
-  return res.send(manifest);
-});
-
 app.get("/stream/:type/:id", async (req, res) => {
   const media = req.params.type;
   let id = req.params.id;
@@ -286,8 +267,12 @@ app.get("/stream/:type/:id", async (req, res) => {
   // Combine results from both hosts
   const combinedResults = result1.concat(result2);
 
+  // Process and filter the combined results
+  const uniqueResults = Array.from(new Set(combinedResults.map(JSON.stringify))).map(JSON.parse);
+  const sortedResults = uniqueResults.sort((a, b) => b.Seeders - a.Seeders);
+
   let stream_results = await Promise.all(
-    combinedResults.map((torrent) => {
+    sortedResults.map((torrent) => {
       if (
         (torrent["MagnetUri"] != "" || torrent["Link"] != "") &&
         torrent["Peers"] > 1
