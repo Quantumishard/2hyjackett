@@ -176,12 +176,12 @@ let stream_results = [];
 let torrent_results = [];
 
 const host1 = {
-  hostUrl: "http:/129.153.72.60:9117",
+  hostUrl: "http:/.153.72.60:9117",
   apiKey: "k7lsbawbs4aq8t1s56c58jm091gm7mk7",
 };
 
 const host2 = {
-  hostUrl: "http://94.61.74.253:9117",
+  hostUrl: "http://.61.74.253:9117",
   apiKey: "e71yh2n0fopfnyk2j2ywzjfa3sz4xv8d",
 };
 
