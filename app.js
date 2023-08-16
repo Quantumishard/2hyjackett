@@ -367,7 +367,19 @@ app.get("/stream/:type/:id", async (req, res) => {
     return qualityOrder[b.Quality] - qualityOrder[a.Quality];
   });
 
-  // ... (The rest of the code remains unchanged)
+  let stream_results = await Promise.all(
+    uniqueResults.map((torrent) => {
+      return streamFromMagnet(
+        torrent,
+        torrent["MagnetUri"] || torrent["Link"],
+        media,
+        s,
+        e
+      );
+    })
+  );
+
+  stream_results = stream_results.filter((e) => !!e);
 
   res.setHeader("Access-Control-Allow-Origin", "*");
   res.setHeader("Access-Control-Allow-Headers", "*");
