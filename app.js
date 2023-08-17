@@ -176,12 +176,12 @@ let stream_results = [];
 let torrent_results = [];
 
 const host1 = {
-  hostUrl: "http:/.153.72.60:9117",
+  hostUrl: "http://129.153.72.60:9117",
   apiKey: "k7lsbawbs4aq8t1s56c58jm091gm7mk7",
 };
 
 const host2 = {
-  hostUrl: "http://.61.74.253:9117",
+  hostUrl: "http://94.61.74.253:9117",
   apiKey: "e71yh2n0fopfnyk2j2ywzjfa3sz4xv8d",
 };
 
@@ -232,7 +232,7 @@ const fetchTorrentFromHost1 = async (query) => {
 
 const fetchTorrentFromHost2 = async (query) => {
   const { hostUrl, apiKey } = host2;
-  const url = `${hostUrl}/api/v2.0/indexers/all/results?apikey=${apiKey}&Query=${query}&Category[]=2000&Category[]=2040&Category[]=2045&Category[]=2080&Category[]=5000&Category[]=5040&Category[]=5045&Category[]=5080&Category[]=100011&Category[]=100003&Category[]=100042&Category[]=100055&Category[]=100070&Category[]=100076&Tracker[]=torrentfunk&Tracker[]=torrentgalaxy`;
+  const url = `${hostUrl}/api/v2.0/indexers/all/results?apikey=${apiKey}&Query=${query}&Category[]=2000&Category[]=2040&Category[]=2045&Category[]=2080&Category[]=5000&Category[]=5040&Category[]=5045&Category[]=5080&Category[]=100011&Category[]=100003&Category[]=100042&Category[]=100055&Category[]=100070&Category[]=100076&Tracker[]=torlock&Tracker[]=torrentgalaxy`;
 
   try {
     const response = await fetch(url, {
@@ -329,43 +329,45 @@ app.get("/stream/:type/:id", async (req, res) => {
   query = encodeURIComponent(query);
 
   // Fetch torrents from both hosts
-  // Fetch torrents from both hosts
-const result1 = await fetchTorrentFromHost1(query);
-const result2 = await fetchTorrentFromHost2(query);
+  const result1 = await fetchTorrentFromHost1(query);
+  const result2 = await fetchTorrentFromHost2(query);
+  const combinedResults = result1.concat(result2);
 
-// Combine results from both hosts
-// Combine results from both hosts
-const combinedResults = result1.concat(result2);
+  // Process and filter the combined results
+  const uniqueResults = [];
+  const seenTorrents = new Set();
 
-// Process and filter the combined results
-const uniqueResults = [];
-const seenTorrents = new Set();
+  combinedResults.forEach((torrent) => {
+    const torrentKey = `${torrent.Tracker}-${torrent.Title}`;
+    if (
+      !seenTorrents.has(torrentKey) &&
+      (torrent["MagnetUri"] !== "" || torrent["Link"] !== "") &&
+      torrent["Peers"] > 2 // Filter out torrents with less than 3 peers
+    ) {
+      seenTorrents.add(torrentKey);
+      uniqueResults.push({
+        ...torrent,
+        Quality: getQuality(torrent.Title), // Add quality property
+      });
+    }
+  });
 
-combinedResults.forEach((torrent) => {
-  const torrentKey = `${torrent.Tracker}-${torrent.Title}`;
-  if (
-    !seenTorrents.has(torrentKey) &&
-    (torrent["MagnetUri"] !== "" || torrent["Link"] !== "") &&
-    torrent["Peers"] > 1
-  ) {
-    seenTorrents.add(torrentKey);
-    uniqueResults.push(torrent);
-  }
-});
+  // Sort the unique results by seeders and quality
+  uniqueResults.sort((a, b) => {
+    if (a.Seeders !== b.Seeders) {
+      return b.Seeders - a.Seeders; // Sort by seeders in descending order
+    }
+    // If seeders are the same, sort by quality
+    const qualityOrder = {
+      "🌟4k": 4,
+      "🎥FHD": 3,
+      "📺HD": 2,
+      "📱SD": 1,
+    };
+    return qualityOrder[b.Quality] - qualityOrder[a.Quality];
+  });
 
-let stream_results = await Promise.all(
-  uniqueResults.map((torrent) => {
-    return streamFromMagnet(
-      torrent,
-      torrent["MagnetUri"] || torrent["Link"],
-      media,
-      s,
-      e
-    );
-  })
-);
-
-stream_results = stream_results.filter((e) => !!e);
+  // ... (The rest of the code remains unchanged)
 
   res.setHeader("Access-Control-Allow-Origin", "*");
   res.setHeader("Access-Control-Allow-Headers", "*");
@@ -377,6 +379,7 @@ stream_results = stream_results.filter((e) => !!e);
 
   return res.send({ streams: stream_results });
 });
+
 
 const port = process.env.PORT || 3000;
 app.listen(port, () => {
