@@ -31,7 +31,9 @@ const toStream = async (parsed, uri, tor, type, s, e) => {
   let title = tor.extraTag || parsed.name;
   let index = 0;
 
-  if (!parsed.files && uri.startsWith("magnet")) {
+  // ... (Your existing code)
+
+if (!parsed.files && uri.startsWith("magnet")) {
   try {
     const engine = torrentStream("magnet:" + uri, {
       connections: 10, // Limit the number of connections/streams
@@ -48,7 +50,15 @@ const toStream = async (parsed, uri, tor, type, s, e) => {
     });
 
     parsed.files = res;
-    engine.destroy(); // Properly close the torrent engine
+    
+    // Properly close the torrent engine
+    engine.on("idle", () => {
+      engine.destroy((err) => {
+        if (err) {
+          console.error("Error destroying engine:", err);
+        }
+      });
+    });
   } catch (error) {
     console.error("Error fetching torrent data:", error);
   }
