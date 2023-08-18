@@ -33,7 +33,9 @@ const toStream = async (parsed, uri, tor, type, s, e) => {
 
   if (!parsed.files && uri.startsWith("magnet")) {
     try {
-      const engine = await createEngine(uri);
+      const engine = torrentStream("magnet:" + uri, {
+        connections: 10, // Limit the number of connections/streams
+      });
 
       const res = await new Promise((resolve, reject) => {
         engine.on("ready", function () {
@@ -42,18 +44,11 @@ const toStream = async (parsed, uri, tor, type, s, e) => {
 
         setTimeout(() => {
           resolve([]);
-        }, 10000);
+        }, 10000); // Timeout if the server is too slow
       });
 
       parsed.files = res;
-
-      engine.on("idle", () => {
-        engine.destroy((err) => {
-          if (err) {
-            console.error("Error destroying engine:", err);
-          }
-        });
-      });
+      engine.destroy();
     } catch (error) {
       console.error("Error fetching torrent data:", error);
     }
@@ -99,21 +94,6 @@ const toStream = async (parsed, uri, tor, type, s, e) => {
       notWebReady: true,
     },
   };
-};
-
-
-const getMeta = async (id, type) => {
-  let [tt, s, e] = id.split(":");
-
-  return fetch(`https://v2.sg.media-imdb.com/suggestion/t/${tt}.json`)
-    .then((res) => res.json())
-    .then((json) => json.d[0])
-    .then(({ l, y }) => ({ name: l, year: y }))
-    .catch((err) =>
-      fetch(`https://v3-cinemeta.strem.io/meta/${type}/${tt}.json`)
-        .then((res) => res.json())
-        .then((json) => json.meta)
-    );
 };
 
 const isRedirect = async (url) => {
@@ -192,8 +172,11 @@ const streamFromMagnet = async (tor, uri, type, s, e, retries = 3) => {
   });
 };
 
+let stream_results = [];
+let torrent_results = [];
+
 const host1 = {
-  hostUrl: "http://129.153.72.60:9117",
+  hostUrl: "http:/129.153.72.60:9117",
   apiKey: "k7lsbawbs4aq8t1s56c58jm091gm7mk7",
 };
 
@@ -204,7 +187,7 @@ const host2 = {
 
 const fetchTorrentFromHost1 = async (query) => {
   const { hostUrl, apiKey } = host1;
-  const url = `${hostUrl}/api/v2.0/indexers/all/results?apikey=${apiKey}&Query=${query}&Category[]=2000&Category[]=2040&Category[]=2045&Category[]=2080&Category[]=5000&Category[]=5040&Category[]=5045&Category[]=5080&Category[]=100011&Category[]=100003&Category[]=100042&Category[]=100055&Category[]=100070&Category[]=100076&Tracker[]=torrentgalaxy&Tracker%5B%5D=bitsearch&Tracker%5B%5D=solidtorrents`;
+  const url = `${hostUrl}/api/v2.0/indexers/all/results?apikey=${apiKey}&Query=${query}&Category[]=2000&Category[]=2040&Category[]=2045&Category[]=2080&Category[]=5000&Category[]=5040&Category[]=5045&Category[]=5080&Category[]=100003&Category[]=100011&Category[]=100042&Category[]=100055&Category[]=100070&Category[]=100076&Tracker%5B%5D=bitsearch&Tracker%5B%5D=bulltorrent&Tracker%5B%5D=solidtorrents`;
 
   try {
     const response = await fetch(url, {
@@ -212,7 +195,8 @@ const fetchTorrentFromHost1 = async (query) => {
         accept: "*/*",
         "accept-language": "en-US,en;q=0.9",
         "x-requested-with": "XMLHttpRequest",
-        cookie: "Jackett=CfDJ8AG_XUDhxS5AsRKz0FldsDJIHUJANrfynyi54VzmYuhr5Ha5Uaww2hSQytMR8fFWjPvDH2lKCzaQhRYI9RuK613PZxJWz2tgHqg1wUAcPTMfi8b_8rm1Igw1-sZB_MnimHHK7ZSP7HfkWicMDaJ4bFGZwUf0xJOwcgjrwcUcFzzsVSTALt97-ibhc7PUn97v5AICX2_jsd6khO8TZosaPFt0cXNgNofimAkr5l6yMUjShg7R3TpVtJ1KxD8_0_OyBjR1mwtcxofJam2aZeFqVRxluD5hnzdyxOWrMRLSGzMPMKiaPXNCsxWy_yQhZhE66U_bVFadrsEeQqqaWb3LIFA",
+        cookie:
+          "Jackett=CfDJ8AG_XUDhxS5AsRKz0FldsDJIHUJANrfynyi54VzmYuhr5Ha5Uaww2hSQytMR8fFWjPvDH2lKCzaQhRYI9RuK613PZxJWz2tgHqg1wUAcPTMfi8b_8rm1Igw1-sZB_MnimHHK7ZSP7HfkWicMDaJ4bFGZwUf0xJOwcgjrwcUcFzzsVSTALt97-ibhc7PUn97v5AICX2_jsd6khO8TZosaPFt0cXNgNofimAkr5l6yMUjShg7R3TpVtJ1KxD8_0_OyBjR1mwtcxofJam2aZeFqVRxluD5hnzdyxOWrMRLSGzMPMKiaPXNCsxWy_yQhZhE66U_bVFadrsEeQqqaWb3LIFA",
       },
       referrerPolicy: "no-referrer",
       method: "GET",
@@ -224,14 +208,10 @@ const fetchTorrentFromHost1 = async (query) => {
     }
 
     const results = await response.json();
+    console.log({ Host1: results["Results"].length });
 
-    // Modify the filter criteria to only exclude torrents with no MagnetUri or Link
-    const validResults = results["Results"].filter((torrent) => {
-      return (torrent["MagnetUri"] || torrent["Link"]) && torrent["Peers"] > 1;
-    });
-
-    if (validResults.length !== 0) {
-      return validResults.map((result) => ({
+    if (results["Results"].length !== 0) {
+      return results["Results"].map((result) => ({
         Tracker: result["Tracker"],
         Category: result["CategoryDesc"],
         Title: result["Title"],
@@ -252,7 +232,7 @@ const fetchTorrentFromHost1 = async (query) => {
 
 const fetchTorrentFromHost2 = async (query) => {
   const { hostUrl, apiKey } = host2;
-  const url = `${hostUrl}/api/v2.0/indexers/all/results?apikey=${apiKey}&Query=${query}&Category[]=2000&Category[]=2040&Category[]=2045&Category[]=2080&Category[]=5000&Category[]=5040&Category[]=5045&Category[]=5080&Category[]=100011&Category[]=100003&Category[]=100042&Category[]=100055&Category[]=100070&Category[]=100076&Tracker[]=torrentgalaxy&Tracker%5B%5D=bitsearch&Tracker%5B%5D=solidtorrents`;
+  const url = `${hostUrl}/api/v2.0/indexers/all/results?apikey=${apiKey}&Query=${query}&Category[]=2000&Category[]=2040&Category[]=2045&Category[]=2080&Category[]=5000&Category[]=5040&Category[]=5045&Category[]=5080&Category[]=100011&Category[]=100003&Category[]=100042&Category[]=100055&Category[]=100070&Category[]=100076&Tracker[]=Torrentz2eu&Tracker[]=torrentfunk&Tracker[]=torrentgalaxy`;
 
   try {
     const response = await fetch(url, {
@@ -260,7 +240,8 @@ const fetchTorrentFromHost2 = async (query) => {
         accept: "*/*",
         "accept-language": "en-US,en;q=0.9",
         "x-requested-with": "XMLHttpRequest",
-        cookie: "Jackett=CfDJ8AG_XUDhxS5AsRKz0FldsDJIHUJANrfynyi54VzmYuhr5Ha5Uaww2hSQytMR8fFWjPvDH2lKCzaQhRYI9RuK613PZxJWz2tgHqg1wUAcPTMfi8b_8rm1Igw1-sZB_MnimHHK7ZSP7HfkWicMDaJ4bFGZwUf0xJOwcgjrwcUcFzzsVSTALt97-ibhc7PUn97v5AICX2_jsd6khO8TZosaPFt0cXNgNofimAkr5l6yMUjShg7R3TpVtJ1KxD8_0_OyBjR1mwtcxofJam2aZeFqVRxluD5hnzdyxOWrMRLSGzMPMKiaPXNCsxWy_yQhZhE66U_bVFadrsEeQqqaWb3LIFA",
+        cookie:
+          "Jackett=CfDJ8AG_XUDhxS5AsRKz0FldsDJIHUJANrfynyi54VzmYuhr5Ha5Uaww2hSQytMR8fFWjPvDH2lKCzaQhRYI9RuK613PZxJWz2tgHqg1wUAcPTMfi8b_8rm1Igw1-sZB_MnimHHK7ZSP7HfkWicMDaJ4bFGZwUf0xJOwcgjrwcUcFzzsVSTALt97-ibhc7PUn97v5AICX2_jsd6khO8TZosaPFt0cXNgNofimAkr5l6yMUjShg7R3TpVtJ1KxD8_0_OyBjR1mwtcxofJam2aZeFqVRxluD5hnzdyxOWrMRLSGzMPMKiaPXNCsxWy_yQhZhE66U_bVFadrsEeQqqaWb3LIFA",
       },
       referrerPolicy: "no-referrer",
       method: "GET",
@@ -272,14 +253,10 @@ const fetchTorrentFromHost2 = async (query) => {
     }
 
     const results = await response.json();
+    console.log({ Host2: results["Results"].length });
 
-    // Modify the filter criteria to only exclude torrents with no MagnetUri or Link
-    const validResults = results["Results"].filter((torrent) => {
-      return (torrent["MagnetUri"] || torrent["Link"]) && torrent["Peers"] > 1;
-    });
-
-    if (validResults.length !== 0) {
-      return validResults.map((result) => ({
+    if (results["Results"].length !== 0) {
+      return results["Results"].map((result) => ({
         Tracker: result["Tracker"],
         Category: result["CategoryDesc"],
         Title: result["Title"],
@@ -297,6 +274,20 @@ const fetchTorrentFromHost2 = async (query) => {
     return [];
   }
 };
+
+function getMeta(id, type) {
+  var [tt, s, e] = id.split(":");
+
+  return fetch(`https://v2.sg.media-imdb.com/suggestion/t/${tt}.json`)
+    .then((res) => res.json())
+    .then((json) => json.d[0])
+    .then(({ l, y }) => ({ name: l, year: y }))
+    .catch((err) =>
+      fetch(`https://v3-cinemeta.strem.io/meta/${type}/${tt}.json`)
+        .then((res) => res.json())
+        .then((json) => json.meta)
+    );
+}
 
 app.get("/manifest.json", (req, res) => {
   const manifest = {
@@ -326,6 +317,8 @@ app.get("/stream/:type/:id", async (req, res) => {
   let query = "";
   let meta = await getMeta(tt, media);
 
+  console.log({ meta: id });
+  console.log({ meta });
   query = meta?.name;
 
   if (media === "movie") {
@@ -336,48 +329,55 @@ app.get("/stream/:type/:id", async (req, res) => {
   query = encodeURIComponent(query);
 
   // Fetch torrents from both hosts
-  const result1 = await fetchTorrentFromHost1(query);
-  const result2 = await fetchTorrentFromHost2(query);
+  // Fetch torrents from both hosts
+const result1 = await fetchTorrentFromHost1(query);
+const result2 = await fetchTorrentFromHost2(query);
 
-  // Combine results from both hosts
-  const combinedResults = result1.concat(result2);
+// Combine results from both hosts
+// Combine results from both hosts
+const combinedResults = result1.concat(result2);
 
-  // Process and filter the combined results
-  const uniqueResults = [];
-  const seenTorrents = new Set();
+// Process and filter the combined results
+const uniqueResults = [];
+const seenTorrents = new Set();
 
-  combinedResults.forEach((torrent) => {
-    const torrentKey = `${torrent.Tracker}-${torrent.Title}`;
-    if (
-      !seenTorrents.has(torrentKey) &&
-      (torrent["MagnetUri"] !== "" || torrent["Link"] !== "") &&
-      torrent["Peers"] > 1
-    ) {
-      seenTorrents.add(torrentKey);
-      uniqueResults.push(torrent);
-    }
-  });
+combinedResults.forEach((torrent) => {
+  const torrentKey = `${torrent.Tracker}-${torrent.Title}`;
+  if (
+    !seenTorrents.has(torrentKey) &&
+    (torrent["MagnetUri"] !== "" || torrent["Link"] !== "") &&
+    torrent["Peers"] > 1
+  ) {
+    seenTorrents.add(torrentKey);
+    uniqueResults.push(torrent);
+  }
+});
 
-  let stream_results = await Promise.all(
-    uniqueResults.map((torrent) => {
-      return streamFromMagnet(
-        torrent,
-        torrent["MagnetUri"] || torrent["Link"],
-        media,
-        s,
-        e
-      );
-    })
-  );
+let stream_results = await Promise.all(
+  uniqueResults.map((torrent) => {
+    return streamFromMagnet(
+      torrent,
+      torrent["MagnetUri"] || torrent["Link"],
+      media,
+      s,
+      e
+    );
+  })
+);
 
-  stream_results = stream_results.filter((e) => !!e);
+stream_results = stream_results.filter((e) => !!e);
 
   res.setHeader("Access-Control-Allow-Origin", "*");
   res.setHeader("Access-Control-Allow-Headers", "*");
   res.setHeader("Content-Type", "application/json");
 
+  console.log({ check: "check" });
+
+  console.log({ Final: stream_results.length });
+
   return res.send({ streams: stream_results });
 });
+
 const port = process.env.PORT || 3000;
 app.listen(port, () => {
   console.log("The server is working on port " + port);
