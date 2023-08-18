@@ -291,25 +291,6 @@ function getMeta(id, type) {
     );
 }
 
-app.get("/manifest.json", (req, res) => {
-  const manifest = {
-    id: "mikmc.od.org+++",
-    version: "3.0.0",
-    name: "HYJackett",
-    description: "Movie & TV Streams from Jackett",
-    logo: "https://raw.githubusercontent.com/mikmc55/hyackett/main/hyjackett.jpg",
-    resources: ["stream"],
-    types: ["movie", "series"],
-    idPrefixes: ["tt"],
-    catalogs: [],
-  };
-
-  res.setHeader("Access-Control-Allow-Origin", "*");
-  res.setHeader("Access-Control-Allow-Headers", "*");
-  res.setHeader("Content-Type", "application/json");
-  return res.send(manifest);
-});
-
 app.get("/stream/:type/:id", async (req, res) => {
   const media = req.params.type;
   let id = req.params.id;
@@ -337,40 +318,41 @@ app.get("/stream/:type/:id", async (req, res) => {
   // Combine results from both hosts
   const combinedResults = result1.concat(result2);
 
-  // Filter and process the combined results
+  // Process the combined results
   const streamPromises = combinedResults.map(async (torrent) => {
-    if (
-      (torrent["MagnetUri"] || torrent["Link"]) && // Check if MagnetUri or Link exists
-      torrent["Peers"] > 1 // Check if Peers count is greater than 1
-    ) {
-      const streamResult = await streamFromMagnet(
-        torrent,
-        torrent["MagnetUri"] || torrent["Link"],
-        media,
-        s,
-        e
-      );
-
-      return streamResult;
-    }
-    return null; // Skip torrents that don't meet conditions
+    const streamResult = await streamFromMagnet(
+      torrent,
+      torrent["MagnetUri"] || torrent["Link"],
+      media,
+      s,
+      e
+    );
+    return streamResult;
   });
 
-  // Await all stream promises and filter out null results
-  const stream_results = (await Promise.all(streamPromises)).filter(
-    (result) => result !== null
-  );
+  // Await all stream promises
+  const stream_results = await Promise.all(streamPromises);
+
+  // Filter out null results and those with 0 peers
+  const validStreams = stream_results.filter((result) => {
+    return (
+      result !== null &&
+      result.sources.includes("dht:") && // Only include torrents with DHT as a source
+      result.sources.length > 1 && // Ensure there are other sources besides DHT
+      result.sources.some((source) => source.startsWith("tracker:"))
+    );
+  });
 
   res.setHeader("Access-Control-Allow-Origin", "*");
   res.setHeader("Access-Control-Allow-Headers", "*");
   res.setHeader("Content-Type", "application/json");
 
   console.log({ check: "check" });
+  console.log({ Final: validStreams.length });
 
-  console.log({ Final: stream_results.length });
-
-  return res.send({ streams: stream_results });
+  return res.send({ streams: validStreams });
 });
+
 
 const port = process.env.PORT || 3000;
 app.listen(port, () => {
