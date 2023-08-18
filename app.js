@@ -197,7 +197,7 @@ const host2 = {
 
 const fetchTorrentFromHost1 = async (query) => {
   const { hostUrl, apiKey } = host1;
-  const url = `${hostUrl}/api/v2.0/indexers/all/results?apikey=${apiKey}&Query=${query}&Category[]=2000&Category[]=2040&Category[]=2045&Category[]=2080&Category[]=5000&Category[]=5040&Category[]=5045&Category[]=5080&Category[]=100003&Category[]=100011&Category[]=100042&Category[]=100055&Category[]=100070&Category[]=100076&Tracker%5B%5D=bitsearch&Tracker%5B%5D=bulltorrent&Tracker%5B%5D=solidtorrents`;
+  const url = `${hostUrl}/api/v2.0/indexers/all/results?apikey=${apiKey}&Query=${query}&Category[]=2000&Category[]=2040&Category[]=2045&Category[]=2080&Category[]=5000&Category[]=5040&Category[]=5045&Category[]=5080&Category[]=100011&Category[]=100003&Category[]=100042&Category[]=100055&Category[]=100070&Category[]=100076&Tracker[]=torrentgalaxy&Tracker%5B%5D=bitsearch&Tracker%5B%5D=solidtorrents`;
 
   try {
     const response = await fetch(url, {
@@ -205,8 +205,7 @@ const fetchTorrentFromHost1 = async (query) => {
         accept: "*/*",
         "accept-language": "en-US,en;q=0.9",
         "x-requested-with": "XMLHttpRequest",
-        cookie:
-          "Jackett=CfDJ8AG_XUDhxS5AsRKz0FldsDJIHUJANrfynyi54VzmYuhr5Ha5Uaww2hSQytMR8fFWjPvDH2lKCzaQhRYI9RuK613PZxJWz2tgHqg1wUAcPTMfi8b_8rm1Igw1-sZB_MnimHHK7ZSP7HfkWicMDaJ4bFGZwUf0xJOwcgjrwcUcFzzsVSTALt97-ibhc7PUn97v5AICX2_jsd6khO8TZosaPFt0cXNgNofimAkr5l6yMUjShg7R3TpVtJ1KxD8_0_OyBjR1mwtcxofJam2aZeFqVRxluD5hnzdyxOWrMRLSGzMPMKiaPXNCsxWy_yQhZhE66U_bVFadrsEeQqqaWb3LIFA",
+        cookie: "Jackett=...YOUR_JACKETT_COOKIE...",
       },
       referrerPolicy: "no-referrer",
       method: "GET",
@@ -218,10 +217,14 @@ const fetchTorrentFromHost1 = async (query) => {
     }
 
     const results = await response.json();
-    console.log({ Host1: results["Results"].length });
 
-    if (results["Results"].length !== 0) {
-      return results["Results"].map((result) => ({
+    // Modify the filter criteria to only exclude torrents with no MagnetUri or Link
+    const validResults = results["Results"].filter((torrent) => {
+      return (torrent["MagnetUri"] || torrent["Link"]) && torrent["Peers"] > 1;
+    });
+
+    if (validResults.length !== 0) {
+      return validResults.map((result) => ({
         Tracker: result["Tracker"],
         Category: result["CategoryDesc"],
         Title: result["Title"],
@@ -240,9 +243,10 @@ const fetchTorrentFromHost1 = async (query) => {
   }
 };
 
+// Similar changes for fetchTorrentFromHost2
 const fetchTorrentFromHost2 = async (query) => {
   const { hostUrl, apiKey } = host2;
-  const url = `${hostUrl}/api/v2.0/indexers/all/results?apikey=${apiKey}&Query=${query}&Category[]=2000&Category[]=2040&Category[]=2045&Category[]=2080&Category[]=5000&Category[]=5040&Category[]=5045&Category[]=5080&Category[]=100011&Category[]=100003&Category[]=100042&Category[]=100055&Category[]=100070&Category[]=100076&Tracker[]=torrentgalaxy`;
+  const url = `${hostUrl}/api/v2.0/indexers/all/results?apikey=${apiKey}&Query=${query}&Category[]=2000&Category[]=2040&Category[]=2045&Category[]=2080&Category[]=5000&Category[]=5040&Category[]=5045&Category[]=5080&Category[]=100011&Category[]=100003&Category[]=100042&Category[]=100055&Category[]=100070&Category[]=100076&Tracker[]=torrentgalaxy&Tracker%5B%5D=bitsearch&Tracker%5B%5D=solidtorrents`;
 
   try {
     const response = await fetch(url, {
@@ -250,8 +254,7 @@ const fetchTorrentFromHost2 = async (query) => {
         accept: "*/*",
         "accept-language": "en-US,en;q=0.9",
         "x-requested-with": "XMLHttpRequest",
-        cookie:
-          "Jackett=CfDJ8AG_XUDhxS5AsRKz0FldsDJIHUJANrfynyi54VzmYuhr5Ha5Uaww2hSQytMR8fFWjPvDH2lKCzaQhRYI9RuK613PZxJWz2tgHqg1wUAcPTMfi8b_8rm1Igw1-sZB_MnimHHK7ZSP7HfkWicMDaJ4bFGZwUf0xJOwcgjrwcUcFzzsVSTALt97-ibhc7PUn97v5AICX2_jsd6khO8TZosaPFt0cXNgNofimAkr5l6yMUjShg7R3TpVtJ1KxD8_0_OyBjR1mwtcxofJam2aZeFqVRxluD5hnzdyxOWrMRLSGzMPMKiaPXNCsxWy_yQhZhE66U_bVFadrsEeQqqaWb3LIFA",
+        cookie: "Jackett=...YOUR_JACKETT_COOKIE...",
       },
       referrerPolicy: "no-referrer",
       method: "GET",
@@ -263,10 +266,14 @@ const fetchTorrentFromHost2 = async (query) => {
     }
 
     const results = await response.json();
-    console.log({ Host2: results["Results"].length });
 
-    if (results["Results"].length !== 0) {
-      return results["Results"].map((result) => ({
+    // Modify the filter criteria to only exclude torrents with no MagnetUri or Link
+    const validResults = results["Results"].filter((torrent) => {
+      return (torrent["MagnetUri"] || torrent["Link"]) && torrent["Peers"] > 1;
+    });
+
+    if (validResults.length !== 0) {
+      return validResults.map((result) => ({
         Tracker: result["Tracker"],
         Category: result["CategoryDesc"],
         Title: result["Title"],
