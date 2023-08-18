@@ -27,74 +27,75 @@ function getQuality(name) {
 }
 
 const toStream = async (parsed, uri, tor, type, s, e) => {
-  const infoHash = parsed.infoHash.toLowerCase();
-  let title = tor.extraTag || parsed.name;
-  let index = 0;
+    const infoHash = parsed.infoHash.toLowerCase();
+    let title = tor.extraTag || parsed.name;
+    let index = 0;
 
-  if (!parsed.files && uri.startsWith("magnet")) {
-    try {
-      const engine = torrentStream("magnet:" + uri, {
-        connections: 10, // Limit the number of connections/streams
-      });
+    if (!parsed.files && uri.startsWith("magnet")) {
+        try {
+            const engine = torrentStream("magnet:" + uri, {
+                connections: 5, // Limit the number of connections/streams
+            });
 
-      const res = await new Promise((resolve, reject) => {
-        engine.on("ready", function () {
-          resolve(engine.files);
-          engine.destroy(); // Close the engine after extracting information
+            const res = await new Promise((resolve, reject) => {
+                engine.on("ready", function () {
+                    resolve(engine.files);
+                });
+
+                setTimeout(() => {
+                    resolve([]);
+                }, 10000); // Timeout if the server is too slow
+            });
+
+            parsed.files = res;
+            engine.destroy(); // Close the engine after use
+        } catch (error) {
+            console.error("Error fetching torrent data:", error);
+        }
+    }
+
+    if (type === "series") {
+        index = (parsed.files || []).findIndex((element) => {
+            const seasonFormatted = `s${s}`.padStart(3, "0");
+            const episodeFormatted = `e${e}`.padStart(3, "0");
+            const extArray = [".mkv", ".mp4", ".avi", ".flv"];
+
+            return (
+                element["name"]?.toLowerCase()?.includes(seasonFormatted) &&
+                element["name"]?.toLowerCase()?.includes(episodeFormatted) &&
+                extArray.some((ext) => element["name"]?.toLowerCase()?.includes(ext))
+            );
         });
 
-        setTimeout(() => {
-          resolve([]);
-          engine.destroy(); // Close the engine after a timeout
-        }, 10000); // Timeout if the server is too slow
-      });
-
-      parsed.files = res;
-    } catch (error) {
-      console.error("Error fetching torrent data:", error);
+        if (index === -1) {
+            return null;
+        }
+        title += index === -1 ? "" : `\n${parsed.files[index]["name"]}`;
     }
-  }
 
-  if (type === "series") {
-    index = (parsed.files || []).findIndex((element) => {
-      return (
-        element["name"]?.toLowerCase()?.includes(`s0${s}`) &&
-        element["name"]?.toLowerCase()?.includes(`e0${e}`) &&
-        [".mkv", ".mp4", ".avi", ".flv"].some((ext) =>
-          element["name"]?.toLowerCase()?.includes(ext)
-        )
-      );
-    });
+    title += "\n" + getQuality(title);
 
-    if (index === -1) {
-      return null;
-    }
-    title += index === -1 ? "" : `\n${parsed.files[index]["name"]}`;
-  }
+    const subtitle = "S:" + tor["Seeders"] + " /P:" + tor["Peers"];
+    title += ` | ${
+        index === -1
+            ? `${getSize(parsed.length || 0)}`
+            : `${getSize((parsed.files && parsed.files[index]?.length) || 0)}`
+    } | ${subtitle} `;
 
-  title += "\n" + getQuality(title);
-
-  const subtitle = "S:" + tor["Seeders"] + " /P:" + tor["Peers"];
-  title += ` | ${
-    index === -1
-      ? `${getSize(parsed.length || 0)}`
-      : `${getSize((parsed.files && parsed.files[index]?.length) || 0)}`
-  } | ${subtitle} `;
-
-  return {
-    name: tor["Tracker"],
-    type,
-    infoHash,
-    fileIdx: index === -1 ? 0 : index,
-    sources: (parsed.announce || []).map((x) => {
-      return "tracker:" + x;
-    }).concat(["dht:" + infoHash]),
-    title,
-    behaviorHints: {
-      bingeGroup: `Jackett-Addon|${infoHash}`,
-      notWebReady: true,
-    },
-  };
+    return {
+        name: tor["Tracker"],
+        type,
+        infoHash,
+        fileIdx: index === -1 ? 0 : index,
+        sources: (parsed.announce || []).map((x) => {
+            return "tracker:" + x;
+        }).concat(["dht:" + infoHash]),
+        title,
+        behaviorHints: {
+            bingeGroup: `Jackett-Addon|${infoHash}`,
+            notWebReady: true,
+        },
+    };
 };
 
 const isRedirect = async (url) => {
@@ -126,51 +127,51 @@ const isRedirect = async (url) => {
 };
 
 const streamFromMagnet = async (tor, uri, type, s, e, retries = 3) => {
-  return new Promise(async (resolve, reject) => {
-    let retryCount = 0;
+    return new Promise(async (resolve, reject) => {
+        let retryCount = 0;
 
-    const attemptStream = async () => {
-      try {
-        // Follow redirection in case the URI is not directly accessible
-        const realUrl = uri?.startsWith("magnet:?") ? uri : await isRedirect(uri);
+        const attemptStream = async () => {
+            try {
+                // Follow redirection in case the URI is not directly accessible
+                const realUrl = uri?.startsWith("magnet:?") ? uri : await isRedirect(uri);
 
-        if (!realUrl) {
-          console.log("No real URL found.");
-          resolve(null);
-          return;
-        }
+                if (!realUrl) {
+                    console.log("No real URL found.");
+                    resolve(null);
+                    return;
+                }
 
-        if (realUrl.startsWith("magnet:?")) {
-          const parsedTorrent = parseTorrent(realUrl);
-          resolve(await toStream(parsedTorrent, realUrl, tor, type, s, e));
-        } else if (realUrl.startsWith("http")) {
-          parseTorrent.remote(realUrl, (err, parsed) => {
-            if (!err) {
-              resolve(toStream(parsed, realUrl, tor, type, s, e));
-            } else {
-              console.error("Error parsing HTTP:", err);
-              resolve(null);
+                if (realUrl.startsWith("magnet:?")) {
+                    const parsedTorrent = parseTorrent(realUrl);
+                    resolve(await toStream(parsedTorrent, realUrl, tor, type, s, e));
+                } else if (realUrl.startsWith("http")) {
+                    parseTorrent.remote(realUrl, (err, parsed) => {
+                        if (!err) {
+                            resolve(toStream(parsed, realUrl, tor, type, s, e));
+                        } else {
+                            console.error("Error parsing HTTP:", err);
+                            resolve(null);
+                        }
+                    });
+                } else {
+                    console.error("No HTTP nor magnet URI found.");
+                    resolve(null);
+                }
+            } catch (error) {
+                console.error("Error while streaming from magnet:", error);
+                retryCount++;
+                if (retryCount < retries) {
+                    console.log("Retrying...");
+                    attemptStream();
+                } else {
+                    console.error("Exceeded retry attempts. Giving up.");
+                    resolve(null);
+                }
             }
-          });
-        } else {
-          console.error("No HTTP nor magnet URI found.");
-          resolve(null);
-        }
-      } catch (error) {
-        console.error("Error while streaming from magnet:", error);
-        retryCount++;
-        if (retryCount < retries) {
-          console.log("Retrying...");
-          attemptStream();
-        } else {
-          console.error("Exceeded retry attempts. Giving up.");
-          resolve(null);
-        }
-      }
-    };
+        };
 
-    attemptStream();
-  });
+        attemptStream();
+    });
 };
 
 let stream_results = [];
@@ -310,73 +311,70 @@ app.get("/manifest.json", (req, res) => {
 });
 
 app.get("/stream/:type/:id", async (req, res) => {
-  const media = req.params.type;
-  let id = req.params.id;
-  id = id.replace(".json", "");
+    const media = req.params.type;
+    let id = req.params.id;
+    id = id.replace(".json", "");
 
-  let [tt, s, e] = id.split(":");
-  let query = "";
-  let meta = await getMeta(tt, media);
+    let [tt, s, e] = id.split(":");
+    let query = "";
+    let meta = await getMeta(tt, media);
 
-  console.log({ meta: id });
-  console.log({ meta });
-  query = meta?.name;
+    console.log({ meta: id });
+    console.log({ meta });
+    query = meta?.name;
 
-  if (media === "movie") {
-    query += " " + meta?.year;
-  } else if (media === "series") {
-    query += " S" + (s ?? "1").padStart(2, "0");
-  }
-  query = encodeURIComponent(query);
+    if (media === "movie") {
+        query += " " + meta?.year;
+    } else if (media === "series") {
+        query += " S" + (s ?? "1").padStart(2, "0");
+    }
+    query = encodeURIComponent(query);
 
-  // Fetch torrents from both hosts
-  // Fetch torrents from both hosts
-const result1 = await fetchTorrentFromHost1(query);
-const result2 = await fetchTorrentFromHost2(query);
+    // Fetch torrents from both hosts
+    const result1 = await fetchTorrentFromHost1(query);
+    const result2 = await fetchTorrentFromHost2(query);
 
-// Combine results from both hosts
-// Combine results from both hosts
-const combinedResults = result1.concat(result2);
+    // Combine results from both hosts
+    const combinedResults = result1.concat(result2);
 
-// Process and filter the combined results
-const uniqueResults = [];
-const seenTorrents = new Set();
+    // Process and filter the combined results
+    const uniqueResults = [];
+    const seenTorrents = new Set();
 
-combinedResults.forEach((torrent) => {
-  const torrentKey = `${torrent.Tracker}-${torrent.Title}`;
-  if (
-    !seenTorrents.has(torrentKey) &&
-    (torrent["MagnetUri"] !== "" || torrent["Link"] !== "") &&
-    torrent["Peers"] > 1
-  ) {
-    seenTorrents.add(torrentKey);
-    uniqueResults.push(torrent);
-  }
-});
+    combinedResults.forEach((torrent) => {
+        const torrentKey = `${torrent.Tracker}-${torrent.Title}`;
+        if (
+            !seenTorrents.has(torrentKey) &&
+            (torrent["MagnetUri"] !== "" || torrent["Link"] !== "") &&
+            torrent["Peers"] > 1
+        ) {
+            seenTorrents.add(torrentKey);
+            uniqueResults.push(torrent);
+        }
+    });
 
-let stream_results = await Promise.all(
-  uniqueResults.map((torrent) => {
-    return streamFromMagnet(
-      torrent,
-      torrent["MagnetUri"] || torrent["Link"],
-      media,
-      s,
-      e
+    let stream_results = await Promise.all(
+        uniqueResults.map((torrent) => {
+            return streamFromMagnet(
+                torrent,
+                torrent["MagnetUri"] || torrent["Link"],
+                media,
+                s,
+                e
+            );
+        })
     );
-  })
-);
 
-stream_results = stream_results.filter((e) => !!e);
+    stream_results = stream_results.filter((e) => !!e);
 
-  res.setHeader("Access-Control-Allow-Origin", "*");
-  res.setHeader("Access-Control-Allow-Headers", "*");
-  res.setHeader("Content-Type", "application/json");
+    res.setHeader("Access-Control-Allow-Origin", "*");
+    res.setHeader("Access-Control-Allow-Headers", "*");
+    res.setHeader("Content-Type", "application/json");
 
-  console.log({ check: "check" });
+    console.log({ check: "check" });
+    console.log({ Final: stream_results.length });
 
-  console.log({ Final: stream_results.length });
-
-  return res.send({ streams: stream_results });
+    return res.send({ streams: stream_results });
 });
 
 const port = process.env.PORT || 3000;
