@@ -335,40 +335,39 @@ app.get("/stream/:type/:id", async (req, res) => {
   const result2 = await fetchTorrentFromHost2(query);
   const combinedResults = result1.concat(result2);
 
-  // Process and filter the combined results
-  const uniqueResults = [];
-  const seenTorrents = new Set();
+ // Process and filter the combined results
+const uniqueResults = [];
+const seenTorrents = new Set();
 
-  combinedResults.forEach((torrent) => {
-    const torrentKey = `${torrent.Tracker}-${torrent.Title}`;
-    if (
-      !seenTorrents.has(torrentKey) &&
-      (torrent["MagnetUri"] !== "" || torrent["Link"] !== "") &&
-      torrent["Peers"] > 2 // Filter out torrents with less than 3 peers
-    ) {
-      seenTorrents.add(torrentKey);
-      uniqueResults.push({
-        ...torrent,
-        Quality: getQuality(torrent.Title), // Add quality property
-      });
-    }
-  });
+combinedResults.forEach((torrent) => {
+  const torrentKey = `${torrent.Tracker}-${torrent.Title}`;
+  if (
+    !seenTorrents.has(torrentKey) &&
+    (torrent["MagnetUri"] !== "" || torrent["Link"] !== "") &&
+    torrent["Peers"] >= 0 // Relax the condition to allow torrents with any peer count
+  ) {
+    seenTorrents.add(torrentKey);
+    uniqueResults.push({
+      ...torrent,
+      Quality: getQuality(torrent.Title), // Add quality property
+    });
+  }
+});
 
-  // Sort the unique results by seeders and quality
-  uniqueResults.sort((a, b) => {
-    if (a.Seeders !== b.Seeders) {
-      return b.Seeders - a.Seeders; // Sort by seeders in descending order
-    }
-    // If seeders are the same, sort by quality
-    const qualityOrder = {
-      "🌟4k": 4,
-      "🎥FHD": 3,
-      "📺HD": 2,
-      "📱SD": 1,
-    };
-    return qualityOrder[b.Quality] - qualityOrder[a.Quality];
-  });
-
+// Sort the unique results by seeders and quality
+uniqueResults.sort((a, b) => {
+  if (a.Seeders !== b.Seeders) {
+    return b.Seeders - a.Seeders; // Sort by seeders in descending order
+  }
+  // If seeders are the same, sort by quality
+  const qualityOrder = {
+    "🌟4k": 4,
+    "🎥FHD": 3,
+    "📺HD": 2,
+    "📱SD": 1,
+  };
+  return qualityOrder[b.Quality] - qualityOrder[a.Quality];
+});
   // ... (The rest of the code remains unchanged)
 
   res.setHeader("Access-Control-Allow-Origin", "*");
