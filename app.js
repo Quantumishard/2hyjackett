@@ -33,7 +33,7 @@ const toStream = async (parsed, uri, tor, type, s, e) => {
 
   if (!parsed.files && uri.startsWith("magnet")) {
     try {
-      const engine = await createEngine(uri); // Use the createEngine function
+      const engine = await createEngine(uri);
 
       const res = await new Promise((resolve, reject) => {
         engine.on("ready", function () {
@@ -58,9 +58,6 @@ const toStream = async (parsed, uri, tor, type, s, e) => {
       console.error("Error fetching torrent data:", error);
     }
   }
-
-  // ... Rest of your code ...
-};
 
   if (type === "series") {
     index = (parsed.files || []).findIndex((element) => {
@@ -103,6 +100,7 @@ const toStream = async (parsed, uri, tor, type, s, e) => {
     },
   };
 };
+
 
 const getMeta = async (id, type) => {
   let [tt, s, e] = id.split(":");
