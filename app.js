@@ -34,7 +34,7 @@ const toStream = async (parsed, uri, tor, type, s, e) => {
   if (!parsed.files && uri.startsWith("magnet")) {
     try {
       const engine = torrentStream("magnet:" + uri, {
-        connections: 10, // Limit the number of connections/streams
+        connections: 10,
       });
 
       const res = await new Promise((resolve, reject) => {
@@ -44,12 +44,11 @@ const toStream = async (parsed, uri, tor, type, s, e) => {
 
         setTimeout(() => {
           resolve([]);
-        }, 10000); // Timeout if the server is too slow
+        }, 10000);
       });
 
       parsed.files = res;
 
-      // Properly close the torrent engine
       engine.on("idle", () => {
         engine.destroy((err) => {
           if (err) {
@@ -102,6 +101,20 @@ const toStream = async (parsed, uri, tor, type, s, e) => {
       notWebReady: true,
     },
   };
+};
+
+const getMeta = async (id, type) => {
+  let [tt, s, e] = id.split(":");
+
+  return fetch(`https://v2.sg.media-imdb.com/suggestion/t/${tt}.json`)
+    .then((res) => res.json())
+    .then((json) => json.d[0])
+    .then(({ l, y }) => ({ name: l, year: y }))
+    .catch((err) =>
+      fetch(`https://v3-cinemeta.strem.io/meta/${type}/${tt}.json`)
+        .then((res) => res.json())
+        .then((json) => json.meta)
+    );
 };
 
 const isRedirect = async (url) => {
@@ -314,8 +327,6 @@ app.get("/stream/:type/:id", async (req, res) => {
   let query = "";
   let meta = await getMeta(tt, media);
 
-  console.log({ meta: id });
-  console.log({ meta });
   query = meta?.name;
 
   if (media === "movie") {
@@ -348,7 +359,7 @@ app.get("/stream/:type/:id", async (req, res) => {
     }
   });
 
-  const stream_results = await Promise.all(
+  let stream_results = await Promise.all(
     uniqueResults.map((torrent) => {
       return streamFromMagnet(
         torrent,
@@ -360,19 +371,14 @@ app.get("/stream/:type/:id", async (req, res) => {
     })
   );
 
-  const filteredStreamResults = stream_results.filter((e) => !!e);
+  stream_results = stream_results.filter((e) => !!e);
 
   res.setHeader("Access-Control-Allow-Origin", "*");
   res.setHeader("Access-Control-Allow-Headers", "*");
   res.setHeader("Content-Type", "application/json");
 
-  console.log({ check: "check" });
-
-  console.log({ Final: filteredStreamResults.length });
-
-  return res.send({ streams: filteredStreamResults });
+  return res.send({ streams: stream_results });
 });
-
 const port = process.env.PORT || 3000;
 app.listen(port, () => {
   console.log("The server is working on port " + port);
