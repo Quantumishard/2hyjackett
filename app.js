@@ -20,10 +20,12 @@ function getQuality(name) {
   name = name.toLowerCase();
 
   if (["2160", "4k", "uhd"].some((x) => name.includes(x))) return "🌟4k";
-  if (["1080", "fhd"].some((x) => name.includes(x))) return " 🎥FHD";
+  if (["1080", "fhd"].some((x) => name.includes(x))) return "🎥FHD";
   if (["720", "hd"].some((x) => name.includes(x))) return "📺HD";
   if (["480p", "380p", "sd"].some((x) => name.includes(x))) return "📱SD";
-  return "";
+
+  // Add a fallback for unrecognized qualities
+  return "Unknown";
 }
 
 const toStream = async (parsed, uri, tor, type, s, e) => {
