@@ -142,16 +142,11 @@ const streamFromMagnet = async (tor, uri, type, s, e, retries = 3) => {
 
     const attemptStream = async () => {
       try {
-        // Check if the URI is already a real URL
-        if (uri.startsWith("http")) {
-          const parsedTorrent = parseTorrent(uri);
-          resolve(await toStream(parsedTorrent, uri, tor, type, s, e));
-        } else if (uri.startsWith("magnet:")) {
-          // Handle magnet links separately
+        if (uri.startsWith("magnet:?")) {
           const parsedTorrent = parseTorrent(uri);
           resolve(await toStream(parsedTorrent, uri, tor, type, s, e));
         } else {
-          // Handle other cases, e.g., fetching torrent data via HTTP
+          // Follow redirection in case the URI is not directly accessible
           const realUrl = await isRedirect(uri);
 
           if (!realUrl) {
@@ -160,7 +155,10 @@ const streamFromMagnet = async (tor, uri, type, s, e, retries = 3) => {
             return;
           }
 
-          if (realUrl.startsWith("http")) {
+          if (realUrl.startsWith("magnet:?")) {
+            const parsedTorrent = parseTorrent(realUrl);
+            resolve(await toStream(parsedTorrent, realUrl, tor, type, s, e));
+          } else if (realUrl.startsWith("http")) {
             parseTorrent.remote(realUrl, (err, parsed) => {
               if (!err) {
                 resolve(toStream(parsed, realUrl, tor, type, s, e));
