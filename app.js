@@ -318,6 +318,9 @@ app.get("/manifest.json", (req, res) => {
   return res.send(manifest);
 });
 
+// ... (other code)
+
+// Inside your "/stream/:type/:id" route handler
 app.get("/stream/:type/:id", async (req, res) => {
   const media = req.params.type;
   let id = req.params.id;
@@ -339,43 +342,41 @@ app.get("/stream/:type/:id", async (req, res) => {
   query = encodeURIComponent(query);
 
   // Fetch torrents from both hosts
-  // Fetch torrents from both hosts
-const result1 = await fetchTorrentFromHost1(query);
-const result2 = await fetchTorrentFromHost2(query);
+  const result1 = await limit(() => fetchTorrentFromHost1(query));
+  const result2 = await limit(() => fetchTorrentFromHost2(query));
 
-// Combine results from both hosts
-// Combine results from both hosts
-const combinedResults = result1.concat(result2);
+  // Combine results from both hosts
+  const combinedResults = result1.concat(result2);
 
-// Process and filter the combined results
-const uniqueResults = [];
-const seenTorrents = new Set();
+  // Process and filter the combined results
+  const uniqueResults = [];
+  const seenTorrents = new Set();
 
-combinedResults.forEach((torrent) => {
-  const torrentKey = `${torrent.Tracker}-${torrent.Title}`;
-  if (
-    !seenTorrents.has(torrentKey) &&
-    (torrent["MagnetUri"] !== "" || torrent["Link"] !== "") &&
-    torrent["Peers"] > 1
-  ) {
-    seenTorrents.add(torrentKey);
-    uniqueResults.push(torrent);
-  }
-});
+  combinedResults.forEach((torrent) => {
+    const torrentKey = `${torrent.Tracker}-${torrent.Title}`;
+    if (
+      !seenTorrents.has(torrentKey) &&
+      (torrent["MagnetUri"] !== "" || torrent["Link"] !== "") &&
+      torrent["Peers"] > 1
+    ) {
+      seenTorrents.add(torrentKey);
+      uniqueResults.push(torrent);
+    }
+  });
 
-let stream_results = await Promise.all(
-  uniqueResults.map((torrent) => {
-    return streamFromMagnet(
-      torrent,
-      torrent["MagnetUri"] || torrent["Link"],
-      media,
-      s,
-      e
-    );
-  })
-);
+  let stream_results = await Promise.all(
+    uniqueResults.map((torrent) => {
+      return limit(() => streamFromMagnet(
+        torrent,
+        torrent["MagnetUri"] || torrent["Link"],
+        media,
+        s,
+        e
+      ));
+    })
+  );
 
-stream_results = stream_results.filter((e) => !!e);
+  stream_results = stream_results.filter((e) => !!e);
 
   res.setHeader("Access-Control-Allow-Origin", "*");
   res.setHeader("Access-Control-Allow-Headers", "*");
@@ -387,6 +388,7 @@ stream_results = stream_results.filter((e) => !!e);
 
   return res.send({ streams: stream_results });
 });
+
 
 const port = process.env.PORT || 3000;
 app.listen(port, () => {
