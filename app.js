@@ -142,30 +142,36 @@ const streamFromMagnet = async (tor, uri, type, s, e, retries = 3) => {
 
     const attemptStream = async () => {
       try {
-        // Follow redirection in case the URI is not directly accessible
-        const realUrl = uri?.startsWith("magnet:?") ? uri : await isRedirect(uri);
-
-        if (!realUrl) {
-          console.log("No real URL found.");
-          resolve(null);
-          return;
-        }
-
-        if (realUrl.startsWith("magnet:?")) {
-          const parsedTorrent = parseTorrent(realUrl);
-          resolve(await toStream(parsedTorrent, realUrl, tor, type, s, e));
-        } else if (realUrl.startsWith("http")) {
-          parseTorrent.remote(realUrl, (err, parsed) => {
-            if (!err) {
-              resolve(toStream(parsed, realUrl, tor, type, s, e));
-            } else {
-              console.error("Error parsing HTTP:", err);
-              resolve(null);
-            }
-          });
+        // Check if the URI is already a real URL
+        if (uri.startsWith("http")) {
+          const parsedTorrent = parseTorrent(uri);
+          resolve(await toStream(parsedTorrent, uri, tor, type, s, e));
         } else {
-          console.error("No HTTP nor magnet URI found.");
-          resolve(null);
+          // Follow redirection in case the URI is not directly accessible
+          const realUrl = await isRedirect(uri);
+
+          if (!realUrl) {
+            console.log("No real URL found.");
+            resolve(null);
+            return;
+          }
+
+          if (realUrl.startsWith("magnet:?")) {
+            const parsedTorrent = parseTorrent(realUrl);
+            resolve(await toStream(parsedTorrent, realUrl, tor, type, s, e));
+          } else if (realUrl.startsWith("http")) {
+            parseTorrent.remote(realUrl, (err, parsed) => {
+              if (!err) {
+                resolve(toStream(parsed, realUrl, tor, type, s, e));
+              } else {
+                console.error("Error parsing HTTP:", err);
+                resolve(null);
+              }
+            });
+          } else {
+            console.error("No HTTP nor magnet URI found.");
+            resolve(null);
+          }
         }
       } catch (error) {
         console.error("Error while streaming from magnet:", error);
@@ -183,6 +189,7 @@ const streamFromMagnet = async (tor, uri, type, s, e, retries = 3) => {
     attemptStream();
   });
 };
+
 
 let stream_results = [];
 let torrent_results = [];
