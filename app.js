@@ -31,28 +31,38 @@ const toStream = async (parsed, uri, tor, type, s, e) => {
   let title = tor.extraTag || parsed.name;
   let index = 0;
 
-  if (!parsed.files && uri.startsWith("magnet")) {
-    try {
-      const engine = torrentStream("magnet:" + uri, {
-        connections: 10, // Limit the number of connections/streams
+  // ... (Your existing code)
+
+if (!parsed.files && uri.startsWith("magnet")) {
+  try {
+    const engine = torrentStream("magnet:" + uri, {
+      connections: 10, // Limit the number of connections/streams
+    });
+
+    const res = await new Promise((resolve, reject) => {
+      engine.on("ready", function () {
+        resolve(engine.files);
       });
 
-      const res = await new Promise((resolve, reject) => {
-        engine.on("ready", function () {
-          resolve(engine.files);
-        });
+      setTimeout(() => {
+        resolve([]);
+      }, 10000); // Timeout if the server is too slow
+    });
 
-        setTimeout(() => {
-          resolve([]);
-        }, 10000); // Timeout if the server is too slow
+    parsed.files = res;
+    
+    // Properly close the torrent engine
+    engine.on("idle", () => {
+      engine.destroy((err) => {
+        if (err) {
+          console.error("Error destroying engine:", err);
+        }
       });
-
-      parsed.files = res;
-      engine.destroy();
-    } catch (error) {
-      console.error("Error fetching torrent data:", error);
-    }
+    });
+  } catch (error) {
+    console.error("Error fetching torrent data:", error);
   }
+}
 
   if (type === "series") {
     index = (parsed.files || []).findIndex((element) => {
@@ -187,7 +197,7 @@ const host2 = {
 
 const fetchTorrentFromHost1 = async (query) => {
   const { hostUrl, apiKey } = host1;
-  const url = `${hostUrl}/api/v2.0/indexers/all/results?apikey=${apiKey}&Query=${query}&Category[]=2000&Category[]=2040&Category[]=2045&Category[]=2080&Category[]=5000&Category[]=5040&Category[]=5045&Category[]=5080&Category[]=100003&Category[]=100011&Category[]=100042&Category[]=100055&Category[]=100070&Category[]=100076&Tracker%5B%5D=bitsearch&Tracker%5B%5D=bulltorrent&Tracker%5B%5D=solidtorrents`;
+  const url = `${hostUrl}/api/v2.0/indexers/all/results?apikey=${apiKey}&Query=${query}&Category%5B%5D=2000&Category%5B%5D=5000&Tracker[]=torrentgalaxy&Tracker%5B%5D=solidtorrents`;
 
   try {
     const response = await fetch(url, {
@@ -232,7 +242,7 @@ const fetchTorrentFromHost1 = async (query) => {
 
 const fetchTorrentFromHost2 = async (query) => {
   const { hostUrl, apiKey } = host2;
-  const url = `${hostUrl}/api/v2.0/indexers/all/results?apikey=${apiKey}&Query=${query}&Category[]=2000&Category[]=2040&Category[]=2045&Category[]=2080&Category[]=5000&Category[]=5040&Category[]=5045&Category[]=5080&Category[]=100011&Category[]=100003&Category[]=100042&Category[]=100055&Category[]=100070&Category[]=100076&Tracker[]=torlock&Tracker[]=torrentgalaxy`;
+  const url = `${hostUrl}/api/v2.0/indexers/all/results?apikey=${apiKey}&Query=${query}&Category[]=2000&Category[]=2040&Category[]=2045&Category[]=2080&Category[]=5000&Category[]=5040&Category[]=5045&Category[]=5080&Category&Tracker%5B%5D=bitsearch&Tracker%5B%5D=bulltorrent`;
 
   try {
     const response = await fetch(url, {
