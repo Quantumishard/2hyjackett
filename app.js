@@ -6,7 +6,7 @@ const torrentStream = require("torrent-stream");
 const bodyParser = require("body-parser");
 const http = require("http");
 const pLimit = require('p-limit');
-const limit = pLimit(5);
+const limit = pLimit(3);
 
 function getSize(size) {
   const gb = 1024 * 1024 * 1024;
