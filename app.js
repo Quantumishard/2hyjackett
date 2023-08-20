@@ -4,7 +4,6 @@ const app = express();
 const fetch = require("node-fetch");
 const torrentStream = require("torrent-stream");
 const bodyParser = require("body-parser");
-const http = require("http");
 const pLimit = require('p-limit');
 const limit = pLimit(5);
 
@@ -156,6 +155,7 @@ const isRedirect = async (url) => {
     request.end();
   });
 };
+
 
 
 const streamFromMagnet = async (tor, uri, type, s, e, retries = 3) => {
