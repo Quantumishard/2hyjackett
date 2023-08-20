@@ -108,13 +108,30 @@ if (!parsed.files && uri.startsWith("magnet")) {
   };
 };
 
+const http = require("http");
+
 const isRedirect = async (url) => {
   return new Promise((resolve, reject) => {
     const timeoutId = setTimeout(() => {
       reject(new Error("Request timeout"));
     }, 5000); // 5-second timeout
 
-    http.get(url, { method: "HEAD" }, (response) => {
+    const urlObject = new URL(url);
+    
+    // Ensure the protocol is HTTP
+    if (urlObject.protocol !== "http:") {
+      reject(new Error("Invalid protocol. Expected 'http:'"));
+    }
+
+    const requestOptions = {
+      protocol: "http:",
+      hostname: urlObject.hostname,
+      port: urlObject.port || 80,
+      path: urlObject.pathname + urlObject.search,
+      method: "HEAD",
+    };
+
+    const request = http.request(requestOptions, (response) => {
       clearTimeout(timeoutId);
       if (response.statusCode === 301 || response.statusCode === 302) {
         const locationURL = new URL(response.headers.location);
@@ -128,13 +145,18 @@ const isRedirect = async (url) => {
       } else {
         resolve(null);
       }
-    }).on("error", (error) => {
+    });
+
+    request.on("error", (error) => {
       clearTimeout(timeoutId);
       console.error("Error while following redirection:", error);
       resolve(null);
     });
+
+    request.end();
   });
 };
+
 
 const streamFromMagnet = async (tor, uri, type, s, e, retries = 3) => {
   return new Promise(async (resolve, reject) => {
