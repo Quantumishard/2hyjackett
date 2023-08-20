@@ -311,7 +311,7 @@ app.get("/manifest.json", (req, res) => {
   const manifest = {
     id: "mikmc.od.org+++",
     version: "3.0.0",
-    name: "HYJackett",
+    name: "2HYJackett",
     description: "Movie & TV Streams from Jackett",
     logo: "https://raw.githubusercontent.com/mikmc55/hyackett/main/hyjackett.jpg",
     resources: ["stream"],
