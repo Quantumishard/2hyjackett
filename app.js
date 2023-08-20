@@ -307,27 +307,6 @@ function getMeta(id, type) {
     );
 }
 
-app.get("/manifest.json", (req, res) => {
-  const manifest = {
-    id: "mikmc.od.org+++",
-    version: "3.0.0",
-    name: "2HYJackett",
-    description: "Movie & TV Streams from Jackett",
-    logo: "https://raw.githubusercontent.com/mikmc55/hyackett/main/hyjackett.jpg",
-    resources: ["stream"],
-    types: ["movie", "series"],
-    idPrefixes: ["tt"],
-    catalogs: [],
-  };
-
-  res.setHeader("Access-Control-Allow-Origin", "*");
-  res.setHeader("Access-Control-Allow-Headers", "*");
-  res.setHeader("Content-Type", "application/json");
-  return res.send(manifest);
-});
-
-// ... (other code)
-
 // Inside your "/stream/:type/:id" route handler
 app.get("/stream/:type/:id", async (req, res) => {
   const media = req.params.type;
@@ -372,7 +351,8 @@ app.get("/stream/:type/:id", async (req, res) => {
     }
   });
 
-  let stream_results = await Promise.all(
+  // Use the global stream_results variable, no need to re-declare it here
+  stream_results = await Promise.all(
     uniqueResults.map((torrent) => {
       return limit(() => streamFromMagnet(
         torrent,
