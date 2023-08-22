@@ -36,7 +36,7 @@ const toStream = async (parsed, uri, tor, type, s, e) => {
 if (!parsed.files && uri.startsWith("magnet")) {
   try {
     const engine = torrentStream("magnet:" + uri, {
-      connections: 3, // Limit the number of connections/streams
+      connections: 7, // Limit the number of connections/streams
     });
 
     const res = await new Promise((resolve, reject) => {
@@ -110,7 +110,7 @@ const isRedirect = async (url) => {
   return new Promise((resolve, reject) => {
     const timeoutId = setTimeout(() => {
       reject(new Error("Request timeout"));
-    }, 5000); // 5-second timeout
+    }, 3000); // 5-second timeout
 
     const urlObject = new URL(url);
     
@@ -380,7 +380,7 @@ app.get("/stream/:type/:id", async (req, res) => {
     if (
       !seenTorrents.has(torrentKey) &&
       (torrent["MagnetUri"] !== "" || torrent["Link"] !== "") &&
-      torrent["Peers"] > 3
+      torrent["Peers"] > 0
     ) {
       seenTorrents.add(torrentKey);
       uniqueResults.push(torrent);
