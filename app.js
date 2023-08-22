@@ -105,8 +105,6 @@ if (!parsed.files && uri.startsWith("magnet")) {
   };
 };
 
-const http = require("http");
-
 const isRedirect = async (url) => {
   return new Promise((resolve, reject) => {
     const timeoutId = setTimeout(() => {
