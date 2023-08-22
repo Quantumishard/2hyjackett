@@ -415,6 +415,20 @@ app.get("/stream/:type/:id", async (req, res) => {
   console.log({ Final: stream_results.length });
 });
 
+  stream_results = stream_results.filter((e) => !!e);
+
+  res.setHeader("Access-Control-Allow-Origin", "*");
+  res.setHeader("Access-Control-Allow-Headers", "*");
+  res.setHeader("Content-Type", "application/json");
+
+  // Send the response with the stream_results
+  res.send({ streams: stream_results });
+
+  console.log({ check: "check" });
+
+  console.log({ Final: stream_results.length });
+});
+
 
 const port = process.env.PORT || 3000;
 app.listen(port, () => {
