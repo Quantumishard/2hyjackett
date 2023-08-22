@@ -4,9 +4,8 @@ const app = express();
 const fetch = require("node-fetch");
 const torrentStream = require("torrent-stream");
 const bodyParser = require("body-parser");
-const http = require("http");
 const pLimit = require('p-limit');
-const limit = pLimit(5);
+const limit = pLimit(3);
 
 function getSize(size) {
   const gb = 1024 * 1024 * 1024;
@@ -33,12 +32,10 @@ const toStream = async (parsed, uri, tor, type, s, e) => {
   let title = tor.extraTag || parsed.name;
   let index = 0;
 
-  // ... (Your existing code)
-
 if (!parsed.files && uri.startsWith("magnet")) {
   try {
     const engine = torrentStream("magnet:" + uri, {
-      connections: 10, // Limit the number of connections/streams
+      connections: 5, // Limit the number of connections/streams
     });
 
     const res = await new Promise((resolve, reject) => {
@@ -48,7 +45,7 @@ if (!parsed.files && uri.startsWith("magnet")) {
 
       setTimeout(() => {
         resolve([]);
-      }, 10000); // Timeout if the server is too slow
+      }, 7500); // Timeout if the server is too slow
     });
 
     parsed.files = res;
@@ -118,15 +115,15 @@ const isRedirect = async (url) => {
 
     const urlObject = new URL(url);
     
-    // Ensure the protocol is HTTP
-    if (urlObject.protocol !== "http:") {
-      reject(new Error("Invalid protocol. Expected 'http:'"));
+    // Ensure the protocol is either "http" or "https"
+    if (urlObject.protocol !== "http:" && urlObject.protocol !== "https:") {
+      reject(new Error("Invalid protocol. Expected 'http:' or 'https:'"));
     }
 
     const requestOptions = {
-      protocol: "http:",
+      protocol: urlObject.protocol,
       hostname: urlObject.hostname,
-      port: urlObject.port || 80,
+      port: urlObject.port || (urlObject.protocol === 'http:' ? 80 : 443), // Use 80 for HTTP and 443 for HTTPS
       path: urlObject.pathname + urlObject.search,
       method: "HEAD",
     };
@@ -135,7 +132,7 @@ const isRedirect = async (url) => {
       clearTimeout(timeoutId);
       if (response.statusCode === 301 || response.statusCode === 302) {
         const locationURL = new URL(response.headers.location);
-        if (locationURL.href.startsWith("http")) {
+        if (locationURL.href.startsWith("http") || locationURL.href.startsWith("https")) {
           resolve(isRedirect(locationURL.href));
         } else {
           resolve(locationURL.href);
@@ -348,10 +345,6 @@ app.get("/manifest.json", (req, res) => {
   return res.send(manifest);
 });
 
-// ... (other code)
-
-// Inside your "/stream/:type/:id" route handler
-// Inside your "/stream/:type/:id" route handler
 app.get("/stream/:type/:id", async (req, res) => {
   const media = req.params.type;
   let id = req.params.id;
@@ -383,7 +376,7 @@ app.get("/stream/:type/:id", async (req, res) => {
   const uniqueResults = [];
   const seenTorrents = new Set();
 
-  combinedResults.forEach((torrent) => {
+  for (const torrent of combinedResults) {
     const torrentKey = `${torrent.Tracker}-${torrent.Title}`;
     if (
       !seenTorrents.has(torrentKey) &&
@@ -393,7 +386,7 @@ app.get("/stream/:type/:id", async (req, res) => {
       seenTorrents.add(torrentKey);
       uniqueResults.push(torrent);
     }
-  });
+  }
 
   // Use the global stream_results variable, no need to re-declare it here
   stream_results = await Promise.all(
@@ -414,11 +407,12 @@ app.get("/stream/:type/:id", async (req, res) => {
   res.setHeader("Access-Control-Allow-Headers", "*");
   res.setHeader("Content-Type", "application/json");
 
+  // Send the response with the stream_results
+  res.send({ streams: stream_results });
+
   console.log({ check: "check" });
 
   console.log({ Final: stream_results.length });
-
-  return res.send({ streams: stream_results });
 });
 
 
