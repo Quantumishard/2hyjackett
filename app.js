@@ -5,7 +5,7 @@ const fetch = require("node-fetch");
 const torrentStream = require("torrent-stream");
 const bodyParser = require("body-parser");
 const pLimit = require('p-limit');
-const limit = pLimit(10);
+const limit = pLimit(3);
 
 function getSize(size) {
   const gb = 1024 * 1024 * 1024;
@@ -31,8 +31,6 @@ const toStream = async (parsed, uri, tor, type, s, e) => {
   const infoHash = parsed.infoHash.toLowerCase();
   let title = tor.extraTag || parsed.name;
   let index = 0;
-
-  // ... (Your existing code)
 
 if (!parsed.files && uri.startsWith("magnet")) {
   try {
